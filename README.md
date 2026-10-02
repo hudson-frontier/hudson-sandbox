@@ -46,6 +46,10 @@ Before that milestone, a set of [feasibility spikes](docs/roadmap.md#feasibility
 
 ## Contribute
 
+For prerequisite diagnosis without starting services, run `make doctor` and read
+the [local development guide](docs/local-development.md). Native Mac builds and
+actual Linux/KVM runtime checks have separate profiles; neither certifies isolation.
+
 Small fixes can start with a pull request. For larger changes, open an issue to agree on scope first. Contributions go through a branch, relevant checks, review, and a maintainer squash merge into `main`.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) for commits, PRs, local checks, and releases. Report vulnerabilities through the private channel in [SECURITY.md](SECURITY.md).
