@@ -25,6 +25,8 @@ jobs:
         with:
           fetch-depth: 2
           persist-credentials: false
+      - name: Test runtime artifact preparation
+        run: make runtime-artifacts-test
       - name: Check documentation
         run: python3 scripts/check_docs.py
       - name: Check diff whitespace
