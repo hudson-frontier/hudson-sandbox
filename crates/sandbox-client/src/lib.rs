@@ -83,10 +83,20 @@ impl Error {
     }
 }
 
+/// Validated local configuration identity. Contains no credential or TLS material.
+/// `origin` is URL-normalized HTTPS (including its trailing slash); `project_id`
+/// is the credential file's declared project, not a server authorization proof.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ClientIdentity<'a> {
+    pub origin: &'a str,
+    pub project_id: &'a str,
+}
+
 #[derive(Clone)]
 pub struct Client {
     http: reqwest::Client,
     origin: Url,
+    project_id: String,
     token: HeaderValue,
     request_timeout: Duration,
 }
@@ -99,6 +109,16 @@ impl Client {
     /// Config and credentials are trusted local files, never workload arguments.
     pub fn from_config(path: &Path) -> Result<Self, Error> {
         config::load(path)
+    }
+
+    /// Returns the identity loaded by this client without rereading configuration.
+    /// Callers own durable profile binding and must compare before recovery or sends.
+    /// Credential rotation does not change this identity when origin/project match.
+    pub fn identity(&self) -> ClientIdentity<'_> {
+        ClientIdentity {
+            origin: self.origin.as_str(),
+            project_id: &self.project_id,
+        }
     }
 
     /// Polls only this operation. Timeout and disconnect never cancel or resubmit it.
