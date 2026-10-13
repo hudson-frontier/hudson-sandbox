@@ -4,6 +4,8 @@ import contextlib
 import io
 import json
 import subprocess
+import sys
+import types
 import unittest
 from unittest.mock import patch
 
@@ -128,13 +130,13 @@ class ProfileTests(unittest.TestCase):
 
 class LinuxPreflightTests(unittest.TestCase):
     def test_mac_does_not_open_kvm(self):
-        with patch("check_linux_host.platform.system", return_value="Darwin"), patch("check_linux_host.os.open") as opened:
+        with patch("check_linux_host.platform.system", return_value="Darwin"), patch("check_linux_host.platform.machine", return_value="arm64"), patch("check_linux_host.platform.release", return_value="test-kernel"), patch("check_linux_host.os.open") as opened:
             report = check_linux_host.inspect_host()
         opened.assert_not_called()
         self.assertTrue(report["errors"])
 
     def test_missing_controllers_and_kvm_permission_failure(self):
-        with patch("check_linux_host.platform.system", return_value="Linux"), patch("check_linux_host.platform.machine", return_value="aarch64"), patch("check_linux_host.os.open", side_effect=PermissionError(13, "private path")), patch("check_linux_host.Path.read_text", return_value="cpu io"):
+        with patch.dict(sys.modules, {"fcntl": types.ModuleType("fcntl")}), patch("check_linux_host.platform.system", return_value="Linux"), patch("check_linux_host.platform.machine", return_value="aarch64"), patch("check_linux_host.platform.release", return_value="test-kernel"), patch("check_linux_host.os.O_CLOEXEC", 0, create=True), patch("check_linux_host.os.open", side_effect=PermissionError(13, "private path")), patch("check_linux_host.Path.read_text", return_value="cpu io"):
             report = check_linux_host.inspect_host()
         self.assertIn("Cannot access the KVM API (errno 13)", report["errors"])
         self.assertIn("Missing cgroup v2 controllers: memory, pids", report["errors"])
