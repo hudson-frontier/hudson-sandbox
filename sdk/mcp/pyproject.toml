@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools==82.0.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hudson-sandbox-mcp"
+version = "0.0.0"
+description = "Optional local stdio tools for the authenticated Hudson Sandbox API"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+dependencies = ["hudson-sandbox-client==0.0.0", "mcp==2.3.0", "jsonschema==4.26.0"]
+
+[project.scripts]
+hudson-sandbox-mcp = "hudson_sandbox_mcp.__main__:main"
+

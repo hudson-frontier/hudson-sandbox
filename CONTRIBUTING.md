@@ -35,6 +35,7 @@ From the repository root, with Python 3.11 or newer, Node 24.9.0 or newer, the p
 ```sh
 make api-setup
 make sdk-setup
+make mcp-setup
 make check
 git diff --check
 ```
