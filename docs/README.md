@@ -25,6 +25,7 @@ The repository is in **early implementation**. PostgreSQL-backed API routes, the
 | [Rust client and project CLI](client-cli.md) | Private configuration, stable keys, commands, files, streams and exit codes | How to use the implemented Project API |
 | [Python and TypeScript clients](language-clients.md) | Language APIs, integer precision, streams, files and package validation | How to call the Project API from Python or Node |
 | [Durable HTTP workflow](durable-workflow.md) | Caller IDs, immutable request/handle recovery, readiness, output/files and explicit cleanup | How a caller reconnects through the existing authenticated SDK |
+| [Local development workload](local-workload.md) | Finite authenticated workload, private recovery state and explicit teardown | How to exercise an operator-provisioned instance and preserve qualification limits |
 | [Optional local MCP adapter](mcp-adapter.md) | Versioned stdio tools, private credential boundary, bounds and recovery | How clients without a shell/custom integration call the existing SDK |
 | [OpenAPI and wire models](openapi.md) | Versioned implemented routes, generated wire types and conformance | How to change and validate the client contract |
 | [Output storage](output-storage.md) | Private artifact identity, archival, publication, verified reads and cleanup worker | How output is retrieved, streamed and retired with recoverable completion receipts |
