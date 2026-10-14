@@ -216,6 +216,18 @@ class FilesystemTests(unittest.TestCase):
                 image.assemble("x86_64", "a" * 40, tree, output)
                 expected = image.sha256(output / "manifest.json")[0]
                 image.verify(output, expected, "x86_64")
+                # The SAME exact pinned bundle must verify from a fresh CRLF
+                # checkout; normalization never changes exported artifact bytes.
+                checkout = root / "crlf-checkout"
+                recipe = checkout / "dev/guest-image/hardening.config"
+                recipe.parent.mkdir(parents=True)
+                recipe.write_bytes(
+                    image.recipe_bytes(
+                        image.ROOT / "dev/guest-image/hardening.config"
+                    ).replace(b"\n", b"\r\n")
+                )
+                with patch.object(image, "ROOT", checkout):
+                    image.verify(output, expected, "x86_64")
                 with self.assertRaises(image.ImageError):
                     image.verify(output, expected, "aarch64")
                 kernel = output / "kernel.bin"

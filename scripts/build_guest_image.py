@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 import platform
 import re
-import shutil
 import subprocess
 import tarfile
 import tempfile
@@ -92,7 +91,7 @@ def build(destination, arch, no_cache=False):
             )
             target = context / name
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source, target)
+            target.write_bytes(guest_image.recipe_bytes(source))
         digest = hashlib.sha256()
         for path in sorted(context.rglob("*")):
             if path.is_file():
