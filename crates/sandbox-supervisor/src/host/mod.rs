@@ -7,6 +7,7 @@ mod file_downloads;
 mod files;
 mod forgetting;
 mod history;
+mod image_admission;
 mod journal;
 mod live_output;
 mod metadata_retirement;
@@ -158,6 +159,7 @@ impl Host {
                 && config.guardian_binary.is_absolute(),
             "invalid real host configuration"
         );
+        image_admission::validate(&config.images)?;
         capabilities::preflight(&config)?;
         for image in config.images.values() {
             Manifest {
