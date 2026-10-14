@@ -63,7 +63,7 @@ sdk-setup: ## Install pinned Python and Node SDK development dependencies
 	.venv-sdk/bin/python -m pip install -r scripts/sdk-requirements.txt
 	npm ci --prefix sdk/typescript --ignore-scripts
 
-SDK_PYTHON_SOURCES = sdk/python/src sdk/python/tests sdk/tests/python_runner.py scripts/generate_clients.py scripts/check_sdk_packages.py
+SDK_PYTHON_SOURCES = sdk/python/src sdk/python/tests sdk/python/examples sdk/tests/python_runner.py scripts/generate_clients.py scripts/check_sdk_packages.py
 SDK_GENERATED_EXCLUDES = --exclude models.py --exclude _requests.py --exclude _schema.py
 
 sdk-check: ## Check SDK parsing, types and unpublished package installation

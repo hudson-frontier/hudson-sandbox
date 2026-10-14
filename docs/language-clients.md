@@ -71,6 +71,12 @@ try {
 
 ## Integer, streaming and file behavior
 
+The [executable Python recovery example](../sdk/python/examples/README.md) saves
+one private immutable execute request before submission, retains the operation
+handle and reconnects through read-only status. It demonstrates explicit same-key
+admission reconciliation without a harness or new API surface, including the
+limits of its conservative client-configuration binding.
+
 Python preserves integer fields as arbitrary-precision `int`, checked against the schema's wire widths. TypeScript returns every typed 64-bit integer as `bigint`, including timestamps, generation, offsets and counters; typed 32-bit values remain `number`. Unsafe numeric input integers are rejected. Decoding preserves integer JSON tokens before type conversion. Use the exported `stringify` function for SDK results; native `JSON.stringify` cannot serialize `bigint`. Untyped result/error JSON also preserves large integer tokens. Non-finite numbers, lone Unicode surrogates and duplicate JSON keys fail; TypeScript additionally rejects floating-point tokens that evaluate to unsafe integer-valued numbers rather than silently rounding them. This stricter case is outside the shared supported numeric profile.
 
 Both clients use the [same byte bounds](client-cli.md#results-bounds-and-exit-status) as Rust: 64 KiB JSON requests, 2 MiB JSON success responses, 64 KiB problems and SSE frames, 32 KiB range chunks, and 8 MiB file transfers. Request deadlines include the response body. Streams have a 100-second total limit and a 20-second idle limit. Parsing is depth-bounded. Semantic admission limits, authorization and lifecycle state remain server-owned.
