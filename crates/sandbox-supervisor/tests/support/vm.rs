@@ -9,7 +9,7 @@ use sha2::{Digest, Sha256};
 use std::{
     fs,
     os::unix::fs::PermissionsExt,
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::{Child, Command, Stdio},
     time::{Duration, Instant},
 };
@@ -25,6 +25,27 @@ pub(super) fn artifact(path: PathBuf) -> Artifact {
         path,
     }
 }
+fn pinned_artifact(path: PathBuf, expected: &str) -> Artifact {
+    let artifact = artifact(path);
+    assert_eq!(
+        artifact.sha256, expected,
+        "controlled artifact SHA-256 mismatch"
+    );
+    artifact
+}
+fn configured_path(name: &str) -> PathBuf {
+    let path = PathBuf::from(
+        std::env::var_os(name)
+            .unwrap_or_else(|| panic!("set {name} to a trusted absolute operator path")),
+    );
+    assert!(path.is_absolute(), "{name} must be absolute");
+    assert_eq!(
+        fs::canonicalize(&path).expect("configured path must exist"),
+        path,
+        "configured path must be canonical"
+    );
+    path
+}
 impl Fixture {
     pub(super) fn new(ttl_ms: i64) -> Self {
         Self::build(ttl_ms, false)
@@ -32,6 +53,13 @@ impl Fixture {
     pub(super) fn build(ttl_ms: i64, agent: bool) -> Self {
         assert_eq!(std::env::var("HUDSON_GUARDIAN_TEST_VM").as_deref(), Ok("1"));
         assert!(rustix::process::geteuid().is_root());
+        assert_eq!(
+            std::env::consts::ARCH,
+            "aarch64",
+            "controlled artifacts currently support aarch64 only"
+        );
+        let artifacts = configured_path("HUDSON_GUARDIAN_ARTIFACT_DIR");
+        let guest_binary = agent.then(|| configured_path("HUDSON_GUARDIAN_GUEST_BINARY"));
         let temp = tempfile::Builder::new().prefix("hg-").tempdir().unwrap();
         let root = temp.path();
         let image = root.join("image");
@@ -47,7 +75,7 @@ impl Fixture {
         if agent {
             // Only the locally built, reviewed binary is passed to ldd. Never run
             // ldd against customer-selected binaries or mount their filesystems.
-            let binary = Path::new("/home/safal.guest/hudson-sandbox/target/release/sandbox-guest");
+            let binary = guest_binary.as_ref().unwrap();
             fs::copy(binary, image.join("init")).unwrap();
             let libraries = Command::new("/usr/bin/ldd").arg(binary).output().unwrap();
             assert!(libraries.status.success());
@@ -77,17 +105,23 @@ impl Fixture {
                 .unwrap()
                 .success()
         );
-        let artifacts = Path::new("/tmp/hudson-fc-artifacts");
         let manifest = Manifest {
             launch_permit: None,
             config: Config {
                 state_root: root.join("s"),
                 cgroup_parent: PathBuf::from("/sys/fs/cgroup/hudson-guardians-tests"),
-                firecracker: artifact(
+                firecracker: pinned_artifact(
                     artifacts.join("release-v1.17.0-aarch64/firecracker-v1.17.0-aarch64"),
+                    "fe726e0b43c04363ac07e358be4dee982c3947c65ed3ae10c770fef5e1cd756c",
                 ),
-                jailer: artifact(artifacts.join("release-v1.17.0-aarch64/jailer-v1.17.0-aarch64")),
-                kernel: artifact(artifacts.join("vmlinux-6.1.186")),
+                jailer: pinned_artifact(
+                    artifacts.join("release-v1.17.0-aarch64/jailer-v1.17.0-aarch64"),
+                    "4d8d2dd4dfc1d47932b2bd261479181dd0c54f0a2f32714421a7e7f9f07ddec8",
+                ),
+                kernel: pinned_artifact(
+                    artifacts.join("vmlinux-6.1.186"),
+                    "0913a93462f1762581e3b25c434212aeadc06084e97f2e9c21ec4fca3fc54b42",
+                ),
                 rootfs: artifact(rootfs),
                 jail_uid: 65534,
                 jail_gid: 65534,
