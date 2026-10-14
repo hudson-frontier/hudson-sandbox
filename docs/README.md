@@ -12,6 +12,7 @@ The repository is in **early implementation**. PostgreSQL-backed API routes, the
 | [Authentication](auth-design.md) | Project/Admin permissions, credentials, sessions, CSRF, revocation, audit semantics | Who can do what and how access is enforced |
 | [Lifecycle](lifecycle.md) | State transitions, completion evidence, deadlines, cancellation, recovery | How create/pause/resume/destroy actually work |
 | [Real lifecycle supervisor](real-supervisor.md) | Durable host RPCs, admission, epochs and guardian integration | How API-created allocations become real VMs |
+| [Local host maintenance](host-maintenance.md) | Offline epoch-fenced drain/status/reopening and remaining reservations | How to block placement without discarding work or claiming cleanup |
 | [Allocation guardian](allocation-guardian.md) | Real VM ownership, independent deadlines, staging and cleanup | How the host component fences and reclaims an allocation |
 | [Guest bootstrap](guest-bootstrap.md) | Allocation credentials, guest init and durable boot binding | How one reusable image becomes an authenticated allocation |
 | [Pinned local guest images](../dev/guest-image/README.md) | Native builds, source pins, manifest integrity and embedded-binary verification | How to build development workload artifacts without embedding credentials |
