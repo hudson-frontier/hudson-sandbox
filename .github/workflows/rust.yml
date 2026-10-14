@@ -86,7 +86,7 @@ jobs:
           make mcp-check
 
       - name: Validate guest image integrity and deterministic filesystem assembly
-        run: make guest-image-check
+        run: make guest-image-check host-image-check
 
       - name: Format
         run: cargo fmt --all -- --check

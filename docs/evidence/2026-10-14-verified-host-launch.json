@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-14",
+  "scope": "Development image integrity and configuration handoff; no real host/VM or hardware qualification.",
+  "base_revision": "2fa1a65aa1f95d01912f2cab8c025cbc2f105855",
+  "source_sha256": {
+    "scripts/launch_verified_host.py": "c26a24960992d380725e8dd181d56279f7ae5052d633b12b642632702d2b99ad",
+    "scripts/guest_image.py": "873e781a6ff16111aa7a1cc17d63e419aede8eaa57ff018c5070a5e616d543e7",
+    "scripts/build_guest_image.py": "5d83422fc6a8f3f0925adb016a389d9f65172105c6f7ce474ae0008962f38fa2"
+  },
+  "manifest_sha256": "7d7f9e92306aa98886ff42e0655f625d0f94d3777a1efd4ad9d6bb4d17f334ff",
+  "image_digest": "sha256:0e09ad4f1dc545655d74fb728ce87cc68347d6380d4c95277169db8f9bc401f7",
+  "full_pinned_bundle_verified": true,
+  "private_verified_config_handoff_to_owned_fake_host": true,
+  "termination_forwarded_and_private_snapshot_removed": true,
+  "launcher_tests_passed": 8,
+  "image_integrity_tests_passed": 9,
+  "crlf_checkout_real_ext4_regression_passed": true,
+  "real_host_or_vm_launched": false,
+  "hardware_qualification": "pending"
+}

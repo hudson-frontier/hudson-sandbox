@@ -83,6 +83,25 @@ def sha256(path, cap=512 * 1024 * 1024):
         return digest.hexdigest(), total
 
 
+def recipe_bytes(path):
+    """Canonical text inputs across LF/CRLF checkouts; artifact hashes stay exact."""
+    fd = os.open(
+        path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    )
+    with os.fdopen(fd, "rb") as source:
+        meta = os.fstat(source.fileno())
+        require(
+            stat.S_ISREG(meta.st_mode) and 0 < meta.st_size <= MAX_METADATA,
+            "invalid recipe file or size",
+        )
+        raw = source.read(MAX_METADATA + 1)
+        require(
+            len(raw) == meta.st_size and len(raw) <= MAX_METADATA,
+            "recipe byte limit or concurrent change",
+        )
+    return raw.replace(b"\r\n", b"\n")
+
+
 def read_json(path):
     fd = os.open(
         path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
@@ -404,8 +423,8 @@ def assemble(arch, revision, rootfs, output):
         "bootstrap/agent state must not be baked into image",
     )
     shutil.copyfile(PINS_PATH, output / "pins.json")
-    shutil.copyfile(
-        ROOT / "dev/guest-image/hardening.config", output / "hardening.config"
+    (output / "hardening.config").write_bytes(
+        recipe_bytes(ROOT / "dev/guest-image/hardening.config")
     )
     identity = arch + revision + agent_sha + pins["userland_image"]
     rootfs_image(rootfs, output / "rootfs.ext4", pins["source_date_epoch"], identity)
@@ -526,8 +545,8 @@ def verify(directory, expected, arch):
         "kernel source digest mismatch",
     )
     require(
-        manifest["artifacts"]["hardening.config"]["sha256"]
-        == sha256(ROOT / "dev/guest-image/hardening.config")[0],
+        recipe_bytes(directory / "hardening.config")
+        == recipe_bytes(ROOT / "dev/guest-image/hardening.config"),
         "kernel hardening recipe mismatch",
     )
     elf(directory / "sandbox-guest", arch)

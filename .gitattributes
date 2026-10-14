@@ -1,0 +1,4 @@
+# Build recipes execute on Linux even when the checkout is created on Windows.
+*.sh text eol=lf
+/dev/guest-image/Dockerfile text eol=lf
+/dev/guest-image/*.config text eol=lf
