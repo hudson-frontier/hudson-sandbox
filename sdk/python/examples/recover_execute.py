@@ -121,8 +121,10 @@ def bound_profile(config):
 class Journal:
     """Two immutable private records, exclusively locked through one directory fd."""
 
-    def __init__(self, path):
-        self.fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    def __init__(self, path, *, directory=None):
+        self.fd = os.open(
+            path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=directory
+        )
         try:
             meta = os.fstat(self.fd)
             if meta.st_uid != os.geteuid() or meta.st_mode & 0o077:

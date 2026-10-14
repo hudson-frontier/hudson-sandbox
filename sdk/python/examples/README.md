@@ -1,5 +1,10 @@
 # Recover one execute request through the existing HTTP SDK
 
+For a finite create/readiness/upload/execute/output/download/destroy example, see
+[local_workload.py](local_workload.py) and the [local workload guide](../../../docs/local-workload.md).
+It retains private recovery state, refuses simulation by default and requires an
+operator-provisioned authenticated instance. Installation and hardware qualification remain pending.
+
 For create/upload/execute/cancel/destroy recovery, use [recover_operation.py](recover_operation.py) and the [versioned workflow contract](../../../docs/durable-workflow.md). Each caller-owned step retains its original key/payload and assigned handles; output/files and readiness use the existing SDK.
 
 [recover_execute.py](recover_execute.py) demonstrates a narrow client recovery
