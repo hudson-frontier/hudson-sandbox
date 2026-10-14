@@ -1,5 +1,7 @@
 # Recover one execute request through the existing HTTP SDK
 
+For create/upload/execute/cancel/destroy recovery, use [recover_operation.py](recover_operation.py) and the [versioned workflow contract](../../../docs/durable-workflow.md). Each caller-owned step retains its original key/payload and assigned handles; output/files and readiness use the existing SDK.
+
 [recover_execute.py](recover_execute.py) demonstrates a narrow client recovery
 contract for [sandbox #112](https://github.com/hudson-infinity/hudson-sandbox/issues/112)
 and [Hudson #17](https://github.com/hudson-infinity/hudson/issues/17). It uses the
@@ -105,6 +107,7 @@ fixture: lost admission reply and process restart, identical key/payload/deadlin
 read-only recovery, expiry, revocation/conflict, response identity validation,
 private/no-clobber state and publication failures. They do not qualify TLS, the
 real API/database, real microVMs or isolation. Existing shared client conformance
-and HTTPS API integration own those client boundaries. #112 remains open for the
-full cross-repository create/readiness/output/file/stream/cancel/destroy fixture
-and coordinated Hudson adapter; this first slice establishes command recovery.
+and HTTPS API integration own those client boundaries. The [workflow contract](../../../docs/durable-workflow.md)
+and multi-mutation example cover create/readiness/output/files/stream/cancel/destroy,
+including actual HTTPS/PostgreSQL process-restart tests. The separate Hudson
+harness adapter and controlled runtime gate remain distinct.

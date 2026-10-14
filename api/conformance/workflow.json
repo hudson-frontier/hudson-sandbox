@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "api_version": "0.0.0",
+  "logical_run_id": "durable-workflow-fixture-v1",
+  "sandbox_id": "sbx_01996110-7c00-7000-8000-000000000001",
+  "operation_id": "op_01996110-7c00-7000-8000-000000000002",
+  "requests": {
+    "create": {
+      "body": {
+        "image_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "resources": {
+          "vcpu": 1,
+          "memory_mib": 128,
+          "disk_mib": 256
+        }
+      }
+    },
+    "upload": {
+      "sandbox_id": "sbx_01996110-7c00-7000-8000-000000000001",
+      "path": "input.bin",
+      "data_base64": "AP9maXh0dXJl",
+      "mode": "0644"
+    },
+    "execute": {
+      "sandbox_id": "sbx_01996110-7c00-7000-8000-000000000001",
+      "body": {
+        "argv": [
+          "/bin/sh",
+          "-c",
+          "cat /workspace/input.bin; printf err >&2"
+        ],
+        "cwd": "/workspace",
+        "deadline_unix_ms": 2000000000000,
+        "output_limit": 1024
+      }
+    },
+    "cancel": {
+      "operation_id": "op_01996110-7c00-7000-8000-000000000002"
+    },
+    "destroy": {
+      "sandbox_id": "sbx_01996110-7c00-7000-8000-000000000001",
+      "body": {}
+    }
+  },
+  "operation_kinds": {
+    "create": "create",
+    "upload": "file_write",
+    "execute": "execute",
+    "cancel": "cancel",
+    "destroy": "destroy"
+  },
+  "readiness": {
+    "desired_state": "running",
+    "not_ready_observed_state": "creating",
+    "ready_observed_state": "running"
+  },
+  "stdout_base64": "AP9maXh0dXJl",
+  "stderr_base64": "ZXJy",
+  "download": {
+    "path": "input.bin",
+    "size": 9,
+    "sha256": "0d77dedb5e962cedf58397b2f172593ec6541db24d8e2593802bf41855aa0fc3"
+  },
+  "stream": {
+    "resume_cursor": "checked-workflow-cursor",
+    "gap_code": "output_expired"
+  }
+}
