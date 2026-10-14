@@ -34,6 +34,17 @@ struct Context {
 fn millis(stamp: OffsetDateTime) -> Result<i64, DispatchError> {
     i64::try_from(stamp.unix_timestamp_nanos() / 1_000_000).map_err(|_| DispatchError::InvalidData)
 }
+// PostgreSQL timestamps have finer precision than the supervisor RPC. A
+// sub-millisecond increase must still select inspection when both deadlines
+// encode to the same Unix millisecond.
+fn renewal_deadline(
+    confirmed: Option<OffsetDateTime>,
+    candidate: OffsetDateTime,
+) -> Result<Option<i64>, DispatchError> {
+    let prior = confirmed.map(millis).transpose()?;
+    let next = millis(candidate)?;
+    Ok(prior.filter(|prior| next > *prior).map(|_| next))
+}
 async fn context(db: &mut PgConnection, claim: &AllocationClaim) -> Result<Context, DispatchError> {
     sqlx::query("SET LOCAL statement_timeout='2s'")
         .execute(&mut *db)
@@ -215,18 +226,18 @@ impl Store {
         // can shorten the monotonic deadline by a millisecond and make the real
         // guardian reject a healthy allocation. Inspect the existing deadline
         // instead, without persisting a renewal intent or touching the watchdog.
-        if confirmed.is_some_and(|prior| until <= prior) {
+        let Some(until_ms) = renewal_deadline(confirmed, until)? else {
             fence(&mut tx, claim).await?;
             tx.commit().await?;
             return Ok(LeaseAction::Inspect(ctx.owner));
-        }
+        };
         sqlx::query("UPDATE allocations SET renewal_pending=true,lease_requested_until=$2,updated_at=clock_timestamp() WHERE id=$1")
             .bind(claim.allocation_id.uuid()).bind(until).execute(&mut *tx).await?;
         fence(&mut tx, claim).await?;
         tx.commit().await?;
         Ok(LeaseAction::Renew(LeaseRequest {
             ownership: Some(ctx.owner),
-            allocation_expires_unix_ms: millis(until)?,
+            allocation_expires_unix_ms: until_ms,
         }))
     }
     pub async fn defer_allocation(&self, claim: &AllocationClaim) -> Result<(), DispatchError> {
@@ -354,5 +365,32 @@ impl Store {
             AND s.active_transition_operation_id IS NULL AND s.observed_state='running'")
             .bind(host.uuid()).bind(epoch).execute(self.pool()).await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    #[test]
+    fn submillisecond_deadline_changes_do_not_send_an_unchanged_rpc() {
+        let prior = OffsetDateTime::UNIX_EPOCH
+            + time::Duration::milliseconds(1000)
+            + time::Duration::microseconds(100);
+        let candidate = prior + time::Duration::microseconds(500);
+        assert!(candidate > prior);
+        assert_eq!(millis(prior).unwrap(), millis(candidate).unwrap());
+        assert_eq!(renewal_deadline(Some(prior), candidate).unwrap(), None);
+        assert_eq!(renewal_deadline(Some(prior), prior).unwrap(), None);
+        assert_eq!(
+            renewal_deadline(Some(prior), prior - time::Duration::milliseconds(1)).unwrap(),
+            None
+        );
+        assert_eq!(renewal_deadline(None, candidate).unwrap(), None);
+        assert_eq!(
+            renewal_deadline(Some(prior), prior + time::Duration::microseconds(900)).unwrap(),
+            Some(1001)
+        );
     }
 }
