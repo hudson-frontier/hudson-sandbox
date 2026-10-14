@@ -36,7 +36,7 @@ reset-db: ## Drop and recreate the development schema
 	docker compose exec -T postgres psql -U sandbox -d sandbox -q \
 		-c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
-check: runtime-artifacts-test api sdk-check lint test docs doctor-check ## Everything CI checks
+check: runtime-artifacts-test api sdk-check mcp-check lint test docs doctor-check ## Everything CI checks
 
 docs: ## Documentation link and fence checks
 	python3 scripts/check_docs.py
@@ -82,3 +82,14 @@ sdk-check: ## Check SDK parsing, types and unpublished package installation
 .PHONY: runtime-artifacts-test
 runtime-artifacts-test: ## Test pinned runtime preparation without network or privilege
 	python3 -m unittest discover -s scripts -p test_runtime_artifacts.py
+
+.PHONY: mcp-setup mcp-check
+mcp-setup: ## Install separate pinned optional MCP development dependencies
+	python3 -m venv .venv-mcp
+	.venv-mcp/bin/python -m pip install -r scripts/mcp-requirements.txt
+
+mcp-check: ## Validate bounded local MCP tools and subprocess interoperability
+	.venv-mcp/bin/ruff check sdk/mcp scripts/check_mcp_package.py
+	.venv-mcp/bin/ruff format --check sdk/mcp scripts/check_mcp_package.py
+	PYTHONPATH=sdk/python/src:sdk/mcp/src .venv-mcp/bin/python -m unittest discover -s sdk/mcp/tests
+	.venv-mcp/bin/python scripts/check_mcp_package.py

@@ -80,6 +80,11 @@ jobs:
       - name: Validate client packages
         run: make sdk-check
 
+      - name: Validate optional local MCP adapter
+        run: |
+          make mcp-setup
+          make mcp-check
+
       - name: Format
         run: cargo fmt --all -- --check
 

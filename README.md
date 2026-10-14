@@ -34,7 +34,7 @@ Agent/human → CLI ──┼──→ Sandbox API → Controller → Firecracke
 Browser UI ────────┘
 ```
 
-Output streaming and file transfers are API capabilities. We are not adding MCP for now; [decision 0002](docs/decisions/0002-no-mcp-server-initially.md) records why and what would change it. See [client interfaces](docs/architecture.md#client-interfaces-and-agent-integration) for the agent flow and [client behavior](docs/api-contract.md#sdk-and-cli-behavior) for retries and results. The CLI and SDKs build from source; packages are unpublished and the management UI remains planned.
+Output streaming and file transfers are API capabilities. The [optional local MCP adapter](sdk/mcp/README.md) wraps the authenticated SDK for clients without shell/custom integration; [decision 0002](docs/decisions/0002-no-mcp-server-initially.md) records the deliberate revision. See [client interfaces](docs/architecture.md#client-interfaces-and-agent-integration) for the agent flow and [client behavior](docs/api-contract.md#sdk-and-cli-behavior) for retries and results. The CLI and SDKs build from source; packages are unpublished and the management UI remains planned.
 
 ## Follow the build
 
