@@ -388,6 +388,11 @@ impl FakeHost {
         }
         // Maintenance can never create evidence for an allocation this epoch
         // has not seen. In particular, an empty restart cannot prove release.
+        let live_until = state
+            .allocations
+            .get(&owner.allocation_id)
+            .filter(|record| record.state == AllocationState::Ready)
+            .map(|record| record.lease_until);
         let Some(fence) = state.fences.get_mut(&owner.allocation_id) else {
             return Ok(LeaseObservation {
                 ownership: Some(owner),
@@ -406,7 +411,6 @@ impl FakeHost {
                 "stale or mismatched lease ownership",
             ));
         }
-        fence.lease_revision = owner.revision;
         if let Some(until) = until {
             if fence
                 .lease_request
@@ -416,8 +420,14 @@ impl FakeHost {
                     "lease retry changed the requested deadline",
                 ));
             }
+            if live_until.is_some_and(|prior| until < prior) {
+                // Match the real guardian instead of silently keeping the old
+                // lease and masking a controller regression.
+                return Err(Status::failed_precondition("renewal cannot shorten lease"));
+            }
             fence.lease_request = Some((owner.revision, until));
         }
+        fence.lease_revision = owner.revision;
         let stopped = fence.stopped;
         let record = state.allocations.get_mut(&owner.allocation_id);
         let (allocation_state, lease_until) = if let Some(record) = record {

@@ -127,8 +127,35 @@ impl Server {
             .unwrap()
             .unwrap()
             .unwrap();
-        assert!(TcpStream::connect(self.address).await.is_err());
+        assert!(!fixture_is_serving(&self.client, self.address).await);
     }
+}
+/// A released ephemeral port can be reused by another parallel fixture (or a
+/// self-connected probe socket). Only this fixture's independently generated
+/// certificate identifies its listener. A bounded successful TLS handshake
+/// would show that the original server still accepts connections.
+async fn fixture_is_serving(client: &TlsConnector, address: SocketAddr) -> bool {
+    matches!(
+        timeout(Duration::from_secs(1), async {
+            let socket = TcpStream::connect(address).await?;
+            client
+                .connect(ServerName::try_from("localhost").unwrap(), socket)
+                .await
+        })
+        .await,
+        Ok(Ok(_))
+    )
+}
+
+#[tokio::test]
+async fn shutdown_probe_identifies_its_own_server_and_rejects_other_tls_listeners() {
+    let mut original = Server::start(Router::new(), ServerLimits::default()).await;
+    let mut other = Server::start(Router::new(), ServerLimits::default()).await;
+    assert!(fixture_is_serving(&original.client, original.address).await);
+    assert!(TcpStream::connect(other.address).await.is_ok());
+    assert!(!fixture_is_serving(&original.client, other.address).await);
+    original.shutdown().await;
+    other.shutdown().await;
 }
 fn connector(roots: rustls::RootCertStore) -> TlsConnector {
     let config = rustls::ClientConfig::builder_with_provider(Arc::new(
@@ -698,7 +725,8 @@ async fn binary_provisions_serves_and_stops_on_sigterm(pool: PgPool) {
     .unwrap();
     let mut roots = rustls::RootCertStore::empty();
     roots.add(cert.cert.der().clone()).unwrap();
-    let mut tls = connector(roots)
+    let client = connector(roots);
+    let mut tls = client
         .connect(
             ServerName::try_from("localhost").unwrap(),
             TcpStream::connect(address).await.unwrap(),
@@ -726,7 +754,7 @@ async fn binary_provisions_serves_and_stops_on_sigterm(pool: PgPool) {
             .unwrap()
             .success()
     );
-    assert!(TcpStream::connect(address).await.is_err());
+    assert!(!fixture_is_serving(&client, address).await);
 }
 
 #[test]

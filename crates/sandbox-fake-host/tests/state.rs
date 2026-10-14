@@ -390,9 +390,16 @@ async fn renewal_lost_reply_reconciles_and_reordering_never_shortens_lease() {
             allocation_expires_unix_ms: unix_ms().unwrap() + 40_000,
         }))
         .await
+        .unwrap_err();
+    assert_eq!(shorter.code(), Code::FailedPrecondition);
+    let inspected = fake
+        .inspect_lease(Request::new(LeaseInspection {
+            ownership: Some(lease_owner(&create, 2)),
+        }))
+        .await
         .unwrap()
         .into_inner();
-    assert_eq!(shorter.allocation_expires_unix_ms, deadline);
+    assert_eq!(inspected.allocation_expires_unix_ms, deadline);
     assert_eq!(
         fake.renew_lease(Request::new(request))
             .await
