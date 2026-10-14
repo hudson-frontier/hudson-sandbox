@@ -39,6 +39,19 @@ class PreparationTests(unittest.TestCase):
                 artifacts.download({'url': 'http://example.test/private?secret=hidden'})
             opener.assert_not_called()
 
+    def test_native_arm64_names_prepare_the_pinned_aarch64_artifacts(self):
+        with tempfile.TemporaryDirectory() as root:
+            for index, architecture in enumerate(('arm64', 'ARM64')):
+                destination = Path(root).resolve() / f'artifacts-{index}'
+                artifacts.prepare(
+                    destination, architecture,
+                    lambda spec: archive() if 'tgz' in spec['url'] else b'kernel',
+                )
+                self.assertEqual((destination / 'vmlinux-6.1.186').read_bytes(), b'kernel')
+                for name in ('firecracker', 'jailer'):
+                    binary = destination / f'release-v1.17.0-aarch64/{name}-v1.17.0-aarch64'
+                    self.assertEqual(binary.read_bytes(), b'abc')
+
     def test_downgrade_redirect_is_rejected(self):
         with self.assertRaises(ValueError):
             artifacts.HTTPSRedirects().redirect_request(None, None, 302, '', {}, 'http://example.test/')

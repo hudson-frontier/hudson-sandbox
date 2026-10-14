@@ -90,6 +90,8 @@ It runs without sudo
 and never creates or starts a VM. It does not build a production guest image,
 attest the upstream kernel, or support x86_64; reviewed pins for that architecture
 remain separate work. Network access is explicit when invoking it.
+Native `arm64`/`ARM64` host labels are accepted as aliases for `aarch64`, so
+preparing those same artifacts on an ARM host does not require a spelling override.
 
 Run inside the development Linux host, with trusted operator-selected paths:
 

@@ -75,6 +75,8 @@ def select_binaries(data):
 
 
 def prepare(destination, architecture, fetch=download):
+    if architecture in ('arm64', 'ARM64'):
+        architecture = 'aarch64'
     if architecture != 'aarch64':
         raise ValueError('only tracked aarch64 development artifacts are pinned; x86_64 is unsupported')
     destination = Path(destination)
