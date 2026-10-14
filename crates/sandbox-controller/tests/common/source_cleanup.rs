@@ -511,37 +511,20 @@ async fn upgrade_preserves_admitted_sources_and_does_not_invent_retirement(pool:
         .execute(&pool)
         .await
         .unwrap();
-    // Exercise the schema-0013 dispatch primitives directly. Current controller
-    // health/registration requires schema 0018 and cannot run before upgrade.
-    f.store
-        .observe_configured_host(f.config.host, f.config.epoch)
+    // Historical schema-0013 state, explicitly simulated. Current startup and
+    // dispatch require later capability columns; using them here would test a
+    // new binary against an unmigrated DB rather than preserve legacy data.
+    sqlx::query("UPDATE hosts SET last_seen_at=clock_timestamp() WHERE id=$1")
+        .bind(f.config.host.uuid())
+        .execute(&pool)
         .await
         .unwrap();
-    let create_claim = f
-        .store
-        .claim_next(OperationKind::Create, 30)
-        .await
-        .unwrap()
-        .unwrap();
-    let sandbox_store::dispatch::CreateAction::Start(request) = f
-        .store
-        .prepare_create_dispatch(&create_claim, &f.config.allowed_images)
-        .await
-        .unwrap()
-    else {
-        panic!("legacy fixture did not dispatch");
-    };
-    let observation = sandbox_protocol::supervisor::supervisor_server::Supervisor::create(
-        &f.fake,
-        tonic::Request::new(request),
-    )
-    .await
-    .unwrap()
-    .into_inner();
-    f.store
-        .record_create_observation(&create_claim, &observation, true)
-        .await
-        .unwrap();
+    sqlx::query("UPDATE allocations SET status='running',lease_expires_at=clock_timestamp()+interval '60 seconds' WHERE id=$1")
+        .bind(legacy.uuid()).execute(&pool).await.unwrap();
+    sqlx::query("UPDATE sandboxes SET observed_state='running',observed_at=clock_timestamp(),observation_simulated=true,active_transition_operation_id=NULL,state_revision=state_revision+1 WHERE id=$1")
+        .bind(s.uuid()).execute(&pool).await.unwrap();
+    sqlx::query("UPDATE operations SET status='succeeded',phase='ready',attempt_count=1,claim_revision=1,completed_at=clock_timestamp(),lease_expires_at=NULL,result=$2 WHERE sandbox_id=$1 AND kind='create'")
+        .bind(s.uuid()).bind(serde_json::json!({"sandbox_id":s.to_string(),"simulated":true})).execute(&pool).await.unwrap();
     let (project, allocation, host, generation, epoch): (
         uuid::Uuid,
         uuid::Uuid,
