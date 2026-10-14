@@ -13,4 +13,3 @@ dependencies = ["hudson-sandbox-client==0.0.0", "mcp==2.3.0", "jsonschema==4.26.
 
 [project.scripts]
 hudson-sandbox-mcp = "hudson_sandbox_mcp.__main__:main"
-
