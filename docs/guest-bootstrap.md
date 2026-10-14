@@ -4,6 +4,8 @@ Status: implemented under the real [allocation guardian](allocation-guardian.md)
 
 ## Reusable image, separate identity
 
+The [pinned local image build and verifier](../dev/guest-image/README.md) provide native architecture parameters, immutable source pins, generated kernel policy and embedded init/agent checks. Automatic manifest-driven admission and authenticated API-to-VM qualification remain follow-up work; the recorded x86_64 source build does not establish release isolation.
+
 The operator still selects a kernel and immutable rootfs by verified digest. The guardian copies the rootfs into private writable allocation storage. It does not edit the selected image to insert credentials or mount a guest filesystem on the host.
 
 Preparation issues a new channel identity for the allocation: a private CA and separate guest/server and host/client certificates. The CA signing key is used in memory and is never persisted. Its two leaf certificates have distinct key pairs and the required TLS roles. The guest server name is `allocation-<UUID>.sandbox.internal`; both endpoints pin the exact permitted peer certificate using the existing [guest TLS contract](guest-protocol.md#transport-and-peer-identity).

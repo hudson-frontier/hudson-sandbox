@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "scope": "Native x86_64 source build and offline integrity verification; no VM or release qualification",
+  "source_revision": "88af217a97eade288e79b2073adf9b67a8c06ebd",
+  "builder": "Ubuntu WSL2 x86_64, Docker, no KVM use",
+  "build_command": "python3 scripts/build_guest_image.py --architecture x86_64 --destination /mnt/d/hudson-sandbox/.worktrees/built-guest-x86-005",
+  "build_receipt": {
+    "architecture": "x86_64",
+    "build_context_sha256": "58c751261b5418ca19ed6c898113cc56d9ba64f863dddc56aeef64983e9a8ea1",
+    "docker_image_id": "sha256:5f231a666c6712322728ce9da54b630603d02a6004a7d917aa9e65e94370ea48",
+    "image_digest": "sha256:0e09ad4f1dc545655d74fb728ce87cc68347d6380d4c95277169db8f9bc401f7",
+    "manifest_sha256": "7d7f9e92306aa98886ff42e0655f625d0f94d3777a1efd4ad9d6bb4d17f334ff",
+    "source_revision": "88af217a97eade288e79b2073adf9b67a8c06ebd",
+    "version": 1
+  },
+  "manifest": {
+    "architecture": "x86_64",
+    "artifacts": {
+      "Cargo.lock": {
+        "sha256": "ee0690ba16d42fa14add55b1076ec3a0776445d2a489429db7b1d88b4caa2478",
+        "size": 93141
+      },
+      "hardening.config": {
+        "sha256": "927320d96235f43974b381712c1666a9989a3c90d9b179cdc2061a2e741f37a8",
+        "size": 725
+      },
+      "kernel.bin": {
+        "sha256": "dbf671ecd0d7ffdab2c3205612fa2d8f5bb74a81b218f433606dc70a07dfabf3",
+        "size": 44101576
+      },
+      "kernel.config": {
+        "sha256": "afe3b528836195a1d7c7bff7e873783fa9c43b667ea34de4c2f63789e5ac2f2d",
+        "size": 91837
+      },
+      "linux-source.tar.xz": {
+        "sha256": "eeedc32bbf2448205aff50ee2760a4d87172cf8f8279c1e5930069ad36f6236e",
+        "size": 135512540
+      },
+      "pins.json": {
+        "sha256": "298705eb8701b4c013b9e478d54efcb107ff2fea03b1021b2a24115e7288e16c",
+        "size": 1237
+      },
+      "rootfs.ext4": {
+        "sha256": "0e09ad4f1dc545655d74fb728ce87cc68347d6380d4c95277169db8f9bc401f7",
+        "size": 268435456
+      },
+      "sandbox-guest": {
+        "sha256": "0a5aba06c4ea1967e848786d36c4f7d0600eaf3a06916c40c2bc2183c1a6d91d",
+        "size": 12180736
+      }
+    },
+    "bootstrap_version": 1,
+    "firecracker_version": "1.17.0",
+    "guest_protocol_version": 1,
+    "guest_version": "0.0.0",
+    "kernel_version": "6.1.186",
+    "minimum_disk_mib": 256,
+    "required_files": {
+      "/init": "0a5aba06c4ea1967e848786d36c4f7d0600eaf3a06916c40c2bc2183c1a6d91d",
+      "/usr/local/libexec/hudson/sandbox-guest": "0a5aba06c4ea1967e848786d36c4f7d0600eaf3a06916c40c2bc2183c1a6d91d"
+    },
+    "source_date_epoch": 1790812800,
+    "source_revision": "88af217a97eade288e79b2073adf9b67a8c06ebd",
+    "version": 1
+  },
+  "validation": {
+    "native_build": "passed",
+    "offline_verification": "passed",
+    "unit_and_ext4_tests": 9,
+    "unrun": [
+      "native aarch64 build",
+      "authenticated API-to-VM workload",
+      "real child/cgroup/disk cleanup",
+      "supported-host isolation",
+      "independent full clean rebuild comparison"
+    ]
+  }
+}

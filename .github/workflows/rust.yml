@@ -60,7 +60,7 @@ jobs:
       - name: Install protobuf compiler
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
+          sudo apt-get install -y protobuf-compiler e2fsprogs
           protoc --version
 
       - name: Set up contract validation
@@ -84,6 +84,9 @@ jobs:
         run: |
           make mcp-setup
           make mcp-check
+
+      - name: Validate guest image integrity and deterministic filesystem assembly
+        run: make guest-image-check
 
       - name: Format
         run: cargo fmt --all -- --check
