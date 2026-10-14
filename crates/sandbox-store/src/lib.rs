@@ -15,6 +15,7 @@ pub mod dispatch;
 pub mod execute;
 pub mod files;
 pub mod history;
+pub mod host_maintenance;
 pub mod leases;
 pub mod lists;
 pub mod output;
