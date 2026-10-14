@@ -60,6 +60,42 @@ async fn report(
 }
 
 impl Store {
+    /// Explicit operator approval; only a drained, empty host can change policy.
+    /// Invalidate freshness until matching authenticated health arrives. Never
+    /// downgrade to legacy metadata or modify ownership/capacity/epoch.
+    pub async fn set_host_capability_policy(
+        &self,
+        host: HostId,
+        expected_epoch: i64,
+        capabilities: &sandbox_protocol::host_capabilities::Capabilities,
+    ) -> Result<HostMaintenance, Error> {
+        if expected_epoch <= 0 || capabilities.validate().is_err() {
+            return Err(Error::Conflict);
+        }
+        let bytes = capabilities.to_json().map_err(|_| Error::Conflict)?;
+        let policy: serde_json::Value =
+            serde_json::from_slice(&bytes).map_err(|_| Error::Conflict)?;
+        let mut tx = self.pool().begin().await?;
+        let value = report(&mut tx, host, expected_epoch).await?;
+        if value.status != "draining" {
+            return Err(Error::Conflict);
+        }
+        if value.outstanding_allocations != 0 {
+            return Err(Error::Outstanding);
+        }
+        sqlx::query(
+            "UPDATE hosts SET compatibility=$3,last_seen_at=NULL,
+            updated_at=clock_timestamp() WHERE id=$1 AND supervisor_epoch=$2",
+        )
+        .bind(host.uuid())
+        .bind(expected_epoch)
+        .bind(policy)
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(value)
+    }
+
     /// Count remaining reservations without interpreting absence as cleanup proof.
     pub async fn host_maintenance(
         &self,

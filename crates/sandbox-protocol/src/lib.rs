@@ -4,6 +4,7 @@
 //! and depends on nothing else in the workspace, so the API, controller,
 //! supervisor, and guest agent cannot drift in their understanding of it.
 
+pub mod host_capabilities;
 pub mod idempotency;
 pub mod ids;
 pub mod images;

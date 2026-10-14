@@ -36,6 +36,8 @@ pub enum PlacementError {
     Reconcile,
     #[error("host is not ready, fresh, or at the expected epoch")]
     HostUnavailable,
+    #[error("host capabilities do not permit the requested image or resources")]
+    HostCompatibility,
     #[error("insufficient host capacity")]
     Capacity,
     #[error("project allocation quota exceeded")]
@@ -170,6 +172,14 @@ impl Store {
         if !ready.0 {
             return Err(PlacementError::HostUnavailable);
         }
+        crate::host_capabilities::compatible(
+            &host,
+            &sandbox.try_get::<String, _>("image_digest")?,
+            cpu as u64,
+            memory as u64,
+            disk as u64,
+        )
+        .map_err(|_| PlacementError::HostCompatibility)?;
         // Use persisted initiator identity, never the claim object's project fields.
         let authorized: (bool,) = sqlx::query_as(
             "SELECT p.status='active' AND o.initiator_kind='project'

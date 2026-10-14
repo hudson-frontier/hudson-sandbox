@@ -93,6 +93,8 @@ message AllocationAuthorityObservation {
 }
 message HealthRequest {}
 message HostInfo {
+  // Bounded versioned capability JSON. Empty is legacy, never a qualified host.
+  bytes capabilities_json = 5;
   bool launch_permits_required = 4;
   string host_id = 1;
   int64 supervisor_epoch = 2;
