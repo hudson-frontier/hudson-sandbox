@@ -2,7 +2,7 @@
 # which needs Linux with KVM — see docs/implementation/dev-env.md.
 
 .DEFAULT_GOAL := help
-.PHONY: help up down logs fmt lint test check docs api api-setup api-generate sdk-setup sdk-check reset-db clean
+.PHONY: help up down logs fmt lint test check docs doctor doctor-check api api-setup api-generate sdk-setup sdk-check reset-db clean
 
 # The compose stack binds non-default ports so a natively installed PostgreSQL
 # cannot be reached by mistake. See compose.yaml.
@@ -36,10 +36,16 @@ reset-db: ## Drop and recreate the development schema
 	docker compose exec -T postgres psql -U sandbox -d sandbox -q \
 		-c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
-check: runtime-artifacts-test api sdk-check lint test docs ## Everything CI checks
+check: runtime-artifacts-test api sdk-check lint test docs doctor-check ## Everything CI checks
 
 docs: ## Documentation link and fence checks
 	python3 scripts/check_docs.py
+
+doctor: ## Diagnose native prerequisites without starting services
+	python3 scripts/doctor.py
+
+doctor-check: ## Test read-only diagnosis without tools, services or KVM
+	python3 -m unittest discover -s scripts -p test_doctor.py
 
 clean: ## Remove build output and dependency volumes
 	cargo clean

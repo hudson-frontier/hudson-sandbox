@@ -4,6 +4,10 @@ Delete this file when `self-hosting.md` and `development.md` exist and describe 
 
 The service runs customer code in Firecracker microVMs, which needs Linux with KVM. Most of the codebase does not. This file is about which half you are working on, and where each half runs.
 
+Start with the [read-only local doctor](../local-development.md) to diagnose
+prerequisites without installing tools or starting dependencies. Current work uses
+available local hardware; no paid infrastructure or deployment is required.
+
 ## Stage 0 — everything except a real VM, on macOS
 
 The Rust libraries and local dependencies run natively today. The [HTTPS API binary and offline project provisioning](../api-server.md) now run locally; the [Rust client and project CLI](../client-cli.md) cover implemented Project operations; the [create/destroy controller](../controller.md) now runs against one operator-provisioned host. [The authenticated fake supervisor](../supervisor-protocol.md) now runs on loopback with operator-supplied certificates. Install `protoc` before building (`brew install protobuf` on macOS).
@@ -43,9 +47,15 @@ A dedicated aarch64 Linux/KVM host and a real Firecracker/jailer boot have now b
 
 The guest runner, real supervisor and API/controller paths now execute commands, transfer files, stream output and reconcile destruction in this environment. The linked component contracts and evidence describe the tested boundaries. This setup keeps the Mac filesystem unmounted. It does not validate the supported x86_64 host, hostile workload isolation, or production performance. Keep those release gates separate from the aarch64 development evidence.
 
-## Stage 2 — rented x86_64 hardware
+## Stage 2 — supported x86_64 hardware, when available
 
-Needed for supported x86_64 compatibility and hostile-workload acceptance, trustworthy performance measurements, later cross-host restore and privileged VM CI. The [spike sheet](phase-0-spikes.md) records the remaining questions. Existing development evidence does not transfer automatically to this configuration.
+Needed for supported x86_64 compatibility and hostile-workload acceptance,
+trustworthy performance measurements, later cross-host restore and privileged VM
+CI. Use already-owned or otherwise available compatible hardware without paid
+infrastructure. If none is available, keep this release gate unverified; renting
+hardware is not required to continue local development. The [spike sheet](phase-0-spikes.md)
+records the remaining questions. Existing development evidence does not transfer
+automatically to this configuration.
 
 Not blocking stages 0 and 1. It is [still listed as blocking](../roadmap.md#still-blocking) because the phase gates cannot pass without it.
 
@@ -55,7 +65,7 @@ You will be on aarch64 locally and x86_64 in production for a long time. Paramet
 
 ## What runs where
 
-| Component | macOS | Lima VM | Rented host |
+| Component | macOS | Lima VM | Supported x86_64 host |
 | --- | --- | --- | --- |
 | `sandbox-protocol`, `sandbox-store`, `sandbox-client` | yes | yes | yes |
 | `sandbox-api`, `sandbox-controller`, `sandbox-cli` | yes | yes | yes |
