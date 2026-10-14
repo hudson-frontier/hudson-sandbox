@@ -57,8 +57,21 @@ async fn running_allocation_renews_without_reopening_create(pool: PgPool) {
     .await
     .unwrap();
     assert_eq!(f.controller().await.tick().await.unwrap(), Tick::Maintained);
-    let (after,pending,source):(i64,bool,Value)=sqlx::query_as("SELECT floor(extract(epoch FROM lease_expires_at)*1000)::bigint,renewal_pending,lease_observation FROM allocations").fetch_one(&pool).await.unwrap();
-    assert!(after > before);
+    let (after, now, pending, source): (i64, i64, bool, Value) = sqlx::query_as(
+        "SELECT floor(extract(epoch FROM lease_expires_at)*1000)::bigint,
+        floor(extract(epoch FROM clock_timestamp())*1000)::bigint,renewal_pending,lease_observation FROM allocations",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(
+        after > now,
+        "renewed execution lease must remain in the future"
+    );
+    assert!(
+        after >= before,
+        "renewal must not shorten the confirmed lease"
+    );
     assert!(!pending);
     assert_eq!(source["simulated"], true);
     let (status, count): (String, i64) =
@@ -70,6 +83,57 @@ async fn running_allocation_renews_without_reopening_create(pool: PgPool) {
     assert_eq!(count, 1);
     assert_eq!(f.fake.total_starts().await, 1);
     assert_eq!(f.controller().await.tick().await.unwrap(), Tick::Idle);
+}
+
+#[sqlx::test(migrator = "sandbox_store::MIGRATOR")]
+async fn early_renewal_preserves_the_initial_guardian_deadline(pool: PgPool) {
+    let f = ready(&pool).await;
+    let (before, now): (i64, i64) = sqlx::query_as(
+        "SELECT floor(extract(epoch FROM lease_expires_at)*1000)::bigint,
+        floor(extract(epoch FROM clock_timestamp())*1000)::bigint FROM allocations",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert!(before > now + 30_000, "exercise the longer boot lease");
+    let deadline = sandbox_supervisor::lease::Deadline::new(before, now, 100).unwrap();
+    let (claim, request) = prepared(&f).await;
+    assert_eq!(request.allocation_expires_unix_ms, before);
+    // Use the real guardian's monotonic deadline implementation, not only the
+    // simulator's returned observation, to demonstrate that it accepts this
+    // early request and that the old shorter horizon is rejected.
+    assert!(
+        deadline
+            .extend(deadline.value(), now + 30_000, now as u64, 100)
+            .is_err()
+    );
+    deadline
+        .extend(
+            deadline.value(),
+            request.allocation_expires_unix_ms,
+            now as u64,
+            100,
+        )
+        .unwrap();
+    let observation = observe(&f, request).await;
+    assert_eq!(observation.allocation_expires_unix_ms, before);
+    assert_eq!(
+        f.store
+            .record_lease_observation(&claim, &observation, true)
+            .await
+            .unwrap(),
+        LeaseResult::Renewed
+    );
+    let (state, pending): (String, bool) = sqlx::query_as(
+        "SELECT s.observed_state,a.renewal_pending FROM sandboxes s
+        JOIN allocations a ON a.id=s.current_allocation_id",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(state, "running");
+    assert!(!pending);
+    assert_eq!(f.fake.total_starts().await, 1);
 }
 
 #[sqlx::test(migrator = "sandbox_store::MIGRATOR")]
