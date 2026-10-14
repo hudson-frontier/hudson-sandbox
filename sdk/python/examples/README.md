@@ -83,6 +83,12 @@ them, including token rotation or timeout settings, **fail closed** before a sav
 mutation is resubmitted. This conservative example does not implement credential
 rotation/migration; an application must reconcile project identity through its
 own trusted credential lifecycle. Keep configuration stable during a command.
+The SDK loads a temporary private snapshot of the exact profile bytes used by
+that digest, so a configuration that changes and changes back during startup
+cannot silently select another origin or token. Snapshot files are mode 0600
+inside a mode 0700 directory and are removed on normal exit or exception. An
+uncatchable process termination may leave a private snapshot in the system's
+temporary directory.
 Never delete the request to bypass binding failures or create a fresh key for an
 uncertain effect.
 

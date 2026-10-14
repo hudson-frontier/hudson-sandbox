@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+from contextlib import contextmanager
 import fcntl
 import hashlib
 import json
@@ -10,6 +11,7 @@ from pathlib import Path
 import re
 import stat
 import sys
+import tempfile
 import uuid
 
 from hudson_sandbox import Client, ClientError, models, new_idempotency_key
@@ -67,18 +69,53 @@ def private_read(path, directory=None, sync=False):
         return data
 
 
-def binding(config):
-    """Conservative identity binding: any config/credential/CA change fails closed."""
+def profile_parts(config):
+    """Read the exact private bytes that must identify the loaded client."""
     raw = private_read(config)
     cfg = decode(raw)
     parts = [raw, private_read(Path(config).parent / cfg["credential_file"])]
     if cfg.get("ca_file") is not None:
         parts.append(private_read(Path(config).parent / cfg["ca_file"]))
+    return cfg, parts
+
+
+def fingerprint(parts):
     digest = hashlib.sha256()
     for part in parts:
         digest.update(len(part).to_bytes(8, "big"))
         digest.update(part)
     return digest.hexdigest()
+
+
+def binding(config):
+    """Conservative identity binding: any config/credential/CA change fails closed."""
+    return fingerprint(profile_parts(config)[1])
+
+
+@contextmanager
+def bound_profile(config):
+    # A before/after reread cannot prove what the SDK loaded when the source
+    # changes A -> B -> A. Load it only from a private snapshot of the exact
+    # bytes used in the fingerprint. Keep the persisted fingerprint format.
+    cfg, parts = profile_parts(config)
+    with tempfile.TemporaryDirectory(prefix="hudson-recovery-profile-") as root:
+        root = Path(root)
+
+        def write(name, data):
+            fd = os.open(
+                root / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600
+            )
+            with os.fdopen(fd, "wb") as target:
+                target.write(data)
+
+        copied = dict(cfg)
+        copied["credential_file"] = "credential.json"
+        write("credential.json", parts[1])
+        if cfg.get("ca_file") is not None:
+            copied["ca_file"] = "ca.pem"
+            write("ca.pem", parts[2])
+        write("client.json", encode(copied))
+        yield fingerprint(parts), root / "client.json"
 
 
 class Journal:
@@ -263,22 +300,24 @@ async def recover(client, journal, fingerprint, action):
 
 
 async def run(args):
-    with Journal(args.state) as journal:
-        fingerprint = binding(args.config)
+    with (
+        Journal(args.state) as journal,
+        bound_profile(args.config) as (profile_binding, config_path),
+    ):
         async with Client(
-            args.config
+            config_path
         ) as client:  # Existing private config and verified TLS.
-            if binding(args.config) != fingerprint:
+            if binding(args.config) != profile_binding:
                 raise StateError("client configuration changed during initialization")
             if args.action == "prepare":
                 prepare(
                     journal,
-                    fingerprint,
+                    profile_binding,
                     args.sandbox,
                     decode(private_read(args.request)),
                 )
                 return {"prepared": True, "submitted": False}
-            return await recover(client, journal, fingerprint, args.action)
+            return await recover(client, journal, profile_binding, args.action)
 
 
 def main():

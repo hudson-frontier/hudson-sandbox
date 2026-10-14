@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import stat
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -353,6 +354,111 @@ class RecoveryTests(unittest.IsolatedAsyncioTestCase):
                 self.assertRaises(example.StateError),
             ):
                 await example.recover(client, journal, changed, "submit")
+
+    async def test_startup_profile_aba_cannot_change_the_submitted_origin_or_token(
+        self,
+    ):
+        for changed_file in (self.config, self.credential):
+            with self.subTest(file=changed_file.name):
+                (self.state / "receipt.json").unlink(missing_ok=True)
+                original = changed_file.read_bytes()
+                replacements = {
+                    self.config: original.replace(b"sandbox.test", b"other.test"),
+                    self.credential: original.replace(b"fixture-token", b"other-token"),
+                }
+                unused_http = []
+                loaded_paths = []
+
+                def handler(request):
+                    self.calls.append(request)
+                    return self.response()
+
+                def load_client(config_path):
+                    # A -> B -> A defeats a before/after fingerprint check if
+                    # the SDK independently reads the mutable source profile.
+                    changed_file.write_bytes(replacements[changed_file])
+                    try:
+                        client = Client(config_path)
+                    finally:
+                        changed_file.write_bytes(original)
+                    unused_http.append(client._http)
+                    client._http = httpx.AsyncClient(
+                        transport=httpx.MockTransport(handler)
+                    )
+                    loaded_paths.append(Path(config_path))
+                    return client
+
+                args = SimpleNamespace(
+                    state=self.state, config=self.config, action="submit"
+                )
+                try:
+                    with patch.object(example, "Client", side_effect=load_client):
+                        result = await example.run(args)
+                finally:
+                    for transport in unused_http:
+                        await transport.aclose()
+                self.assertEqual(result["operation_id"], OPERATION)
+                self.assertEqual(self.calls[-1].url.host, "sandbox.test")
+                self.assertEqual(
+                    self.calls[-1].headers["Authorization"], "Bearer fixture-token"
+                )
+                self.assertEqual(changed_file.read_bytes(), original)
+                self.assertFalse(loaded_paths[-1].exists())
+
+    async def test_startup_profile_change_stays_changed_and_sends_no_mutation(self):
+        original = self.config.read_bytes()
+        unused_http = []
+
+        def load_client(config_path):
+            client = Client(config_path)
+            unused_http.append(client._http)
+            client._http = httpx.AsyncClient(
+                transport=httpx.MockTransport(
+                    lambda _: self.fail("changed profile must not send")
+                )
+            )
+            self.config.write_bytes(original.replace(b"sandbox.test", b"other.test"))
+            return client
+
+        try:
+            with (
+                patch.object(example, "Client", side_effect=load_client),
+                self.assertRaises(example.StateError),
+            ):
+                await example.run(
+                    SimpleNamespace(
+                        state=self.state, config=self.config, action="submit"
+                    )
+                )
+        finally:
+            self.config.write_bytes(original)
+            for transport in unused_http:
+                await transport.aclose()
+        self.assertFalse((self.state / "receipt.json").exists())
+
+    async def test_private_snapshot_is_removed_when_client_loading_fails(self):
+        loaded = []
+
+        def reject(config_path):
+            config_path = Path(config_path)
+            loaded.append(config_path)
+            self.assertEqual(config_path.parent.stat().st_mode & 0o777, 0o700)
+            for path in config_path.parent.iterdir():
+                self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            raise ClientError("configuration")
+
+        with (
+            patch.object(example, "Client", side_effect=reject),
+            self.assertRaises(ClientError),
+        ):
+            await example.run(
+                SimpleNamespace(state=self.state, config=self.config, action="submit")
+            )
+        self.assertEqual(len(loaded), 1)
+        self.assertFalse(loaded[0].parent.exists())
+        self.assertTrue(self.config.exists())
+        self.assertTrue(self.credential.exists())
+        self.assertFalse((self.state / "receipt.json").exists())
 
     async def test_admitted_wrong_sandbox_or_invalid_id_rejected(self):
         for changes in [
