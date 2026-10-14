@@ -14,6 +14,7 @@ The repository is in **early implementation**. PostgreSQL-backed API routes, the
 | [Real lifecycle supervisor](real-supervisor.md) | Durable host RPCs, admission, epochs and guardian integration | How API-created allocations become real VMs |
 | [Allocation guardian](allocation-guardian.md) | Real VM ownership, independent deadlines, staging and cleanup | How the host component fences and reclaims an allocation |
 | [Guest bootstrap](guest-bootstrap.md) | Allocation credentials, guest init and durable boot binding | How one reusable image becomes an authenticated allocation |
+| [Pinned local guest images](../dev/guest-image/README.md) | Native builds, source pins, manifest integrity and embedded-binary verification | How to build development workload artifacts without embedding credentials |
 | [Guest protocol](guest-protocol.md) | Authenticated vsock framing, host client and guest listener | How commands, receipts and bounded output cross the VM boundary |
 | [Guest runner](guest-runner.md) | Guest process execution, bounded output and local recovery receipts | What the command component implements and what host protections remain |
 | [Linux development](linux-development.md) | Nested Linux/KVM setup and real boot evidence | How to develop the guest and real supervisor |

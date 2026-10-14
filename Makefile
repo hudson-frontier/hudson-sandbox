@@ -36,7 +36,7 @@ reset-db: ## Drop and recreate the development schema
 	docker compose exec -T postgres psql -U sandbox -d sandbox -q \
 		-c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
-check: runtime-artifacts-test api sdk-check mcp-check lint test docs doctor-check ## Everything CI checks
+check: runtime-artifacts-test guest-image-check api sdk-check mcp-check lint test docs doctor-check ## Everything CI checks
 
 docs: ## Documentation link and fence checks
 	python3 scripts/check_docs.py
@@ -69,7 +69,7 @@ sdk-setup: ## Install pinned Python and Node SDK development dependencies
 	.venv-sdk/bin/python -m pip install -r scripts/sdk-requirements.txt
 	npm ci --prefix sdk/typescript --ignore-scripts
 
-SDK_PYTHON_SOURCES = sdk/python/src sdk/python/tests sdk/python/examples sdk/tests/python_runner.py scripts/generate_clients.py scripts/check_sdk_packages.py
+SDK_PYTHON_SOURCES = sdk/python/src sdk/python/tests sdk/python/examples sdk/tests/python_runner.py scripts/generate_clients.py scripts/check_sdk_packages.py scripts/guest_image.py scripts/build_guest_image.py scripts/test_guest_image.py
 SDK_GENERATED_EXCLUDES = --exclude models.py --exclude _requests.py --exclude _schema.py
 
 sdk-check: ## Check SDK parsing, types and unpublished package installation
@@ -93,3 +93,7 @@ mcp-check: ## Validate bounded local MCP tools and subprocess interoperability
 	.venv-mcp/bin/ruff format --check sdk/mcp scripts/check_mcp_package.py
 	PYTHONPATH=sdk/python/src:sdk/mcp/src .venv-mcp/bin/python -m unittest discover -s sdk/mcp/tests
 	.venv-mcp/bin/python scripts/check_mcp_package.py
+
+.PHONY: guest-image-check
+guest-image-check: ## Test guest artifact integrity and unprivileged ext4 reproducibility
+	python3 -m unittest discover -s scripts -p test_guest_image.py

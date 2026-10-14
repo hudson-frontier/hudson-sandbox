@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "rust_image": "rust:1.92.0-bookworm@sha256:e90e846de4124376164ddfbaab4b0774c7bdeef5e738866295e5a90a34a307a2",
+  "userland_image": "debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587",
+  "debian_snapshot": "20261001T000000Z",
+  "source_date_epoch": 1790812800,
+  "kernel_version": "6.1.186",
+  "kernel_url": "https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.1.186.tar.xz",
+  "kernel_sha256": "eeedc32bbf2448205aff50ee2760a4d87172cf8f8279c1e5930069ad36f6236e",
+  "firecracker_version": "1.17.0",
+  "firecracker_revision": "95f868c8e345b1cc8faccd1a3c910b4989dc3f58",
+  "kernel_configs": {
+    "aarch64": {
+      "url": "https://raw.githubusercontent.com/firecracker-microvm/firecracker/95f868c8e345b1cc8faccd1a3c910b4989dc3f58/resources/guest_configs/microvm-kernel-ci-aarch64-6.1.config",
+      "sha256": "5c73202d00b5591ad987d9f808208a318e317fd32dbc17de613c5a93fabe2939"
+    },
+    "x86_64": {
+      "url": "https://raw.githubusercontent.com/firecracker-microvm/firecracker/95f868c8e345b1cc8faccd1a3c910b4989dc3f58/resources/guest_configs/microvm-kernel-ci-x86_64-6.1.config",
+      "sha256": "153ca1b40f3312bfb40b7587b471ea548a915f98f480f0d0892a1537957a2147"
+    }
+  }
+}

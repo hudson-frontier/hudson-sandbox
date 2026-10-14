@@ -36,6 +36,8 @@ The 8 GiB ceiling is a snapshot decision as much as a scheduling one: memory siz
 
 ## How a sandbox boots
 
+The [local image recipe](../dev/guest-image/README.md) pins development build inputs and verifies architecture, kernel settings and embedded init/agent hashes before operator use. Its Debian image currently requires 256 MiB disk. Native aarch64 builds, authenticated workload boot/teardown and the supported-host acceptance set remain pending.
+
 Firecracker takes a kernel and a root filesystem as separate inputs. They are not one artifact, and the split matters for [decision 0003](decisions/0003-guest-root-with-our-kernel.md):
 
 ```text
