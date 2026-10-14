@@ -207,15 +207,19 @@ impl Store {
             tx.commit().await?;
             return Ok(LeaseAction::Inspect(ctx.owner));
         }
-        // Boot may receive a longer initial lease than the normal renewal
-        // horizon. Preserve its absolute deadline during early maintenance:
-        // the guardian rejects a shorter request rather than silently keeping
-        // the old lease. The policy checks above still stop a shortened sandbox
-        // deadline, and an expired/unknown lease still requires inspection.
-        let horizon = confirmed.map_or(now + time::Duration::seconds(30), |v| {
-            v.max(now + time::Duration::seconds(30))
+        let until = expiry.map_or(now + time::Duration::seconds(30), |e| {
+            e.min(now + time::Duration::seconds(30))
         });
-        let until = expiry.map_or(horizon, |e| e.min(horizon));
+        // Early boot maintenance and a fixed sandbox expiry need no extension.
+        // Re-converting an unchanged Unix deadline with fresh wall/boot samples
+        // can shorten the monotonic deadline by a millisecond and make the real
+        // guardian reject a healthy allocation. Inspect the existing deadline
+        // instead, without persisting a renewal intent or touching the watchdog.
+        if confirmed.is_some_and(|prior| until <= prior) {
+            fence(&mut tx, claim).await?;
+            tx.commit().await?;
+            return Ok(LeaseAction::Inspect(ctx.owner));
+        }
         sqlx::query("UPDATE allocations SET renewal_pending=true,lease_requested_until=$2,updated_at=clock_timestamp() WHERE id=$1")
             .bind(claim.allocation_id.uuid()).bind(until).execute(&mut *tx).await?;
         fence(&mut tx, claim).await?;
