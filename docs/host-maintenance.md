@@ -1,6 +1,6 @@
 # Local host maintenance
 
-The offline `sandbox-host-manager` command provides the draining slice of [#116](https://github.com/hudson-infinity/hudson-sandbox/issues/116). It uses trusted operator database access; no new public management endpoint or guest authority is exposed. Host capability advertisements, registration/compatibility, backup/restore rehearsals and upgrade qualification remain separate work in that issue.
+The offline `sandbox-host-manager` command provides the draining slice of [#116](https://github.com/hudson-infinity/hudson-sandbox/issues/116). It uses trusted operator database access; no new public management endpoint or guest authority is exposed. [Capability enrollment](host-capabilities.md) adds a separate operator-approved compatibility contract. Backup/restore rehearsals and supported-host upgrade qualification remain work in that issue.
 
 ## Private configuration and commands
 
@@ -15,7 +15,7 @@ cargo run -p sandbox-controller --bin sandbox-host-manager -- \
   --database-config /private/database.json --host-id HOST_ID --host-epoch CURRENT_EPOCH finish-drain
 ```
 
-Use the explicitly provisioned typed host ID and expected positive epoch. No command issues/replaces an epoch, changes capacity, approves an image or turns an unhealthy host ready. Database access is installation-wide operator authority, not a Project credential or implicit delegation to an agent.
+Use the explicitly provisioned typed host ID and expected positive epoch. These drain/status commands do not issue/replace an epoch, change capacity, approve an image or turn an unhealthy host ready. The separate `set-capabilities` action approves a contract only on an empty draining host. Database access is installation-wide operator authority, not a Project credential or implicit delegation to an agent.
 
 ## Drain and completion semantics
 
@@ -31,4 +31,4 @@ Let admitted work finish or explicitly cancel/destroy the relevant sandbox throu
 
 [Store tests](../crates/sandbox-store/tests/host_maintenance.rs) exercise epoch fencing, idempotence, unhealthy refusal, stale health and explicit reopening. [Controller tests](../crates/sandbox-controller/tests/host_maintenance.rs) prove placement exclusion while an admitted command reports a nonzero exit, followed by explicit destruction and reopening. The command's unit test rejects unsafe/private configuration boundaries.
 
-These PostgreSQL/simulated-host checks validate maintenance coordination, not a real host drain or backup/restore procedure. Supported-host qualification, capabilities/image compatibility, independent operator acceptance and future multi-host/cloud/provider decisions remain the [roadmap](roadmap.md). Saved-memory draining requires verified full pause/resume; it is not implied by this command.
+These PostgreSQL/simulated-host checks validate maintenance coordination, not a real host drain or backup/restore procedure. Supported-host qualification, independent operator acceptance and future multi-host/cloud/provider decisions remain the [roadmap](roadmap.md). Saved-memory draining requires verified full pause/resume; it is not implied by this command.

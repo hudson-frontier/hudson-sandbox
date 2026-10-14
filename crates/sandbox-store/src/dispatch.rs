@@ -29,6 +29,8 @@ pub enum DispatchError {
     Unauthorized,
     #[error("image is not in the controller allowlist")]
     ImageDenied,
+    #[error("host capability policy does not match authenticated runtime or image resources")]
+    HostCompatibility,
     #[error("configured host is absent, stale, or at another epoch")]
     HostUnavailable,
     #[error("supervisor observation does not match current ownership")]
@@ -176,26 +178,8 @@ impl Store {
         host: HostId,
         epoch: i64,
     ) -> Result<(), DispatchError> {
-        let changed = sqlx::query(
-            "UPDATE hosts SET last_seen_at=clock_timestamp(),updated_at=clock_timestamp()
-            WHERE id=$1 AND supervisor_epoch=$2 AND supervisor_epoch>0",
-        )
-        .bind(host.uuid())
-        .bind(epoch)
-        .execute(self.pool())
-        .await?
-        .rows_affected();
-        if changed != 1 {
-            return Err(DispatchError::HostUnavailable);
-        }
-        // A healthy replacement epoch cannot vouch for the prior incarnation.
-        // Preserve its capacity and observation timestamp while exposing uncertainty.
-        sqlx::query("UPDATE sandboxes s SET observed_state='unknown',state_revision=state_revision+1,updated_at=clock_timestamp()
-            FROM allocations a WHERE s.current_allocation_id=a.id AND a.host_id=$1 AND a.supervisor_epoch<>$2
-            AND a.released_at IS NULL AND s.desired_state='running' AND s.observed_state='running'
-            AND s.active_transition_operation_id IS NULL")
-            .bind(host.uuid()).bind(epoch).execute(self.pool()).await?;
-        Ok(())
+        self.observe_configured_host_with_capabilities(host, epoch, &[], false)
+            .await
     }
 
     pub async fn prepare_create_dispatch(
@@ -237,9 +221,22 @@ impl Store {
             return Err(DispatchError::ImageDenied);
         }
         let host: uuid::Uuid = ctx.allocation.try_get("host_id")?;
-        let ready: (bool,) = sqlx::query_as("SELECT status='ready' AND COALESCE(last_seen_at>clock_timestamp()-interval '30 seconds',false)
-            FROM hosts WHERE id=$1").bind(host).fetch_one(&mut *tx).await?;
-        if !ready.0 {
+        let host_id = host;
+        let host = sqlx::query("SELECT * FROM hosts WHERE id=$1 FOR UPDATE")
+            .bind(host_id)
+            .fetch_one(&mut *tx)
+            .await?;
+        // Evaluate time after the lock; health can expire while waiting for it.
+        let fresh: bool = sqlx::query_scalar(
+            "SELECT status='ready' AND supervisor_epoch=$2
+            AND COALESCE(last_seen_at>clock_timestamp()-interval '30 seconds',false)
+            FROM hosts WHERE id=$1",
+        )
+        .bind(host_id)
+        .bind(ctx.owner.supervisor_epoch)
+        .fetch_one(&mut *tx)
+        .await?;
+        if !fresh {
             return Err(DispatchError::HostUnavailable);
         }
         let resources = Resources {
@@ -257,6 +254,13 @@ impl Store {
         ) {
             return Err(DispatchError::InvalidResources);
         }
+        crate::host_capabilities::compatible(
+            &host,
+            &digest,
+            u64::from(resources.vcpu),
+            resources.memory_mib,
+            resources.disk_mib,
+        )?;
         let allocation_id: uuid::Uuid = ctx.allocation.try_get("id")?;
         let lease: (OffsetDateTime,) = sqlx::query_as(
             "UPDATE allocations SET lease_expires_at=least(clock_timestamp()+interval '60 seconds',

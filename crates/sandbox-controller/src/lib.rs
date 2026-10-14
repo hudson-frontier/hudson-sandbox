@@ -68,6 +68,7 @@ pub enum Tick {
 
 #[derive(Debug)]
 pub struct Controller {
+    new_work_compatible: bool,
     launch_permits_required: bool,
     store: Store,
     config: ControllerConfig,
@@ -99,6 +100,7 @@ impl Controller {
         let archive_client =
             transport::connect_archiver(&config.endpoint, config.host, ca, cert, key).await?;
         let mut controller = Self {
+            new_work_compatible: true,
             launch_permits_required: false,
             store,
             config,
@@ -129,10 +131,37 @@ impl Controller {
         self.sync_allocation_authority().await?;
         // This only touches the existing operator-provisioned epoch. Registration
         // and epoch issuance remain separate; the RPC cannot insert arbitrary hosts.
-        self.store
-            .observe_configured_host(self.config.host, self.config.epoch)
-            .await?;
+        let observed = self
+            .store
+            .observe_configured_host_with_capabilities(
+                self.config.host,
+                self.config.epoch,
+                &health.capabilities_json,
+                health.simulated,
+            )
+            .await;
+        match observed {
+            Ok(()) => self.new_work_compatible = true,
+            Err(DispatchError::HostCompatibility) => {
+                self.store
+                    .invalidate_host_capability_observation(self.config.host, self.config.epoch)
+                    .await?;
+                if self.new_work_compatible {
+                    eprintln!(
+                        "Host compatibility changed: new work denied; retained work still requires reconciliation and explicit cleanup."
+                    );
+                }
+                self.new_work_compatible = false;
+            }
+            Err(error) => return Err(error.into()),
+        }
         Ok(())
+    }
+
+    /// Admission status only; true also includes unqualified legacy mode.
+    /// Incompatible but authenticated hosts remain available for retained cleanup.
+    pub fn new_work_compatible(&self) -> bool {
+        self.new_work_compatible
     }
 
     async fn defer(&self, claim: &Claim) -> Result<Tick, ControllerError> {
@@ -393,6 +422,7 @@ impl Controller {
                 PlacementError::Capacity
                 | PlacementError::Quota
                 | PlacementError::HostUnavailable
+                | PlacementError::HostCompatibility
                 | PlacementError::Reconcile,
             ) => return self.defer(claim).await,
             Err(PlacementError::LostClaim) => return Ok(Tick::LostOwnership),
@@ -429,7 +459,11 @@ impl Controller {
             Err(DispatchError::InvalidResources) => {
                 return self.reject(claim, CreateRejection::InvalidResources).await;
             }
-            Err(DispatchError::HostUnavailable | DispatchError::Conflict) => {
+            Err(
+                DispatchError::HostUnavailable
+                | DispatchError::HostCompatibility
+                | DispatchError::Conflict,
+            ) => {
                 return self.defer(claim).await;
             }
             Err(DispatchError::LostClaim) => return Ok(Tick::LostOwnership),

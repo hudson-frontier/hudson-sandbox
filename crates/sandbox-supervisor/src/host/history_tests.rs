@@ -178,6 +178,7 @@ fn failed_durable_intent_write_poison_fences_without_discarding_receipts() {
     };
     let host: HostId = record.owner.host_id.parse().unwrap();
     let config = Config {
+        capabilities: None,
         host,
         epoch: 1,
         state_root: temp.path().into(),

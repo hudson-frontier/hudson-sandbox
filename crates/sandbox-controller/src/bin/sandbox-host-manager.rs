@@ -24,6 +24,11 @@ enum Action {
     Drain,
     /// Explicitly reopen only with no reservations and fresh host observation.
     FinishDrain,
+    /// Approve a bounded capability contract on an empty draining host.
+    SetCapabilities {
+        #[arg(long)]
+        capabilities_config: PathBuf,
+    },
 }
 
 #[derive(serde::Deserialize)]
@@ -33,7 +38,7 @@ struct DatabaseConfig {
     database_url: String,
 }
 
-fn config(path: &std::path::Path) -> anyhow::Result<DatabaseConfig> {
+fn private_bytes(path: &std::path::Path) -> anyhow::Result<Vec<u8>> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
@@ -54,18 +59,22 @@ fn config(path: &std::path::Path) -> anyhow::Result<DatabaseConfig> {
         let mut bytes = Vec::new();
         file.take(65537).read_to_end(&mut bytes)?;
         anyhow::ensure!(bytes.len() <= 65536, "configuration too large");
-        let value: DatabaseConfig = serde_json::from_slice(&bytes)?;
-        anyhow::ensure!(
-            value.version == 1 && !value.database_url.is_empty(),
-            "unsupported configuration"
-        );
-        Ok(value)
+        Ok(bytes)
     }
     #[cfg(not(unix))]
     {
         let _ = path;
         anyhow::bail!("private configuration requires Unix");
     }
+}
+
+fn config(path: &std::path::Path) -> anyhow::Result<DatabaseConfig> {
+    let value: DatabaseConfig = serde_json::from_slice(&private_bytes(path)?)?;
+    anyhow::ensure!(
+        value.version == 1 && !value.database_url.is_empty(),
+        "unsupported configuration"
+    );
+    Ok(value)
 }
 
 async fn run(args: Args) -> anyhow::Result<()> {
@@ -82,6 +91,16 @@ async fn run(args: Args) -> anyhow::Result<()> {
         Action::FinishDrain => {
             store
                 .finish_host_drain(args.host_id, args.host_epoch)
+                .await?
+        }
+        Action::SetCapabilities {
+            capabilities_config,
+        } => {
+            let value = sandbox_protocol::host_capabilities::Capabilities::from_json(
+                &private_bytes(&capabilities_config)?,
+            )?;
+            store
+                .set_host_capability_policy(args.host_id, args.host_epoch, &value)
                 .await?
         }
     };

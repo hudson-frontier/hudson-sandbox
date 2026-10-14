@@ -48,6 +48,7 @@ The JSON configuration has these fields:
 | `guardian_binary` | Absolute path to the reviewed `sandbox-supervisor` binary |
 | `firecracker`, `jailer` | Each has an absolute `path` and lowercase SHA-256 hex `sha256` |
 | `images` | Map from allowlisted `sha256:` image identifiers to `kernel` and `rootfs` artifacts, each with `path`/`sha256` |
+| `capabilities` | Optional [version 1 operator contract](host-capabilities.md); startup/health probe native architecture, kernel, KVM and cgroups, and bind its digests to configured artifacts |
 | `jail_uid`, `jail_gid` | Unprivileged jailer IDs, each at least 65534 |
 | `capacity` | `vcpu`, `memory_mib`, `disk_mib`, including the allowances above |
 

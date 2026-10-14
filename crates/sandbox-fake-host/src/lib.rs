@@ -47,6 +47,7 @@ pub struct FakeHost {
 
 #[derive(Default)]
 struct State {
+    capabilities_json: Vec<u8>,
     allocations: HashMap<String, Record>,
     /// Retained after release so old generations cannot start again.
     sandboxes: HashMap<String, (String, String, i64)>,
@@ -122,6 +123,17 @@ fn bounded_deadline(deadline: i64, now: i64) -> Result<Duration, Status> {
 }
 
 impl FakeHost {
+    /// Development-only advertisements remain explicitly simulated.
+    pub async fn set_capabilities(
+        &self,
+        value: sandbox_protocol::host_capabilities::Capabilities,
+    ) -> Result<(), sandbox_protocol::host_capabilities::Error> {
+        if !value.simulated {
+            return Err(sandbox_protocol::host_capabilities::Error);
+        }
+        self.state.lock().await.capabilities_json = value.to_json()?;
+        Ok(())
+    }
     pub fn new(config: FakeConfig) -> Result<Self, Status> {
         if config.epoch <= 0
             || config.images.is_empty()
@@ -630,6 +642,7 @@ impl Supervisor for FakeHost {
             return Err(Status::unavailable("injected health failure"));
         }
         Ok(Response::new(HostInfo {
+            capabilities_json: self.state.lock().await.capabilities_json.clone(),
             launch_permits_required: false,
             host_id: self.config.host.to_string(),
             supervisor_epoch: self.config.epoch,

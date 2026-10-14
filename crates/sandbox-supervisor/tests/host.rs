@@ -52,6 +52,7 @@ impl Fixture {
         let vm = vm::Fixture::build(60000, agent);
         let c = &vm.manifest.config;
         let config = Config {
+            capabilities: None,
             host: vm.manifest.start.owner.host,
             epoch: 1,
             state_root: vm.temp.path().join("h"),

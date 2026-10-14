@@ -1,6 +1,7 @@
 //! Durable, root-operated lifecycle adapter. Guest readiness and cleanup remain observations.
 mod archive;
 mod authority;
+mod capabilities;
 mod commands;
 mod file_downloads;
 mod files;
@@ -53,6 +54,9 @@ pub struct Capacity {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
+    /// Opt-in versioned operator contract; enroll matching database policy first.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub capabilities: Option<sandbox_protocol::host_capabilities::Capabilities>,
     /// Enable only during fresh-host provisioning; persisted mode cannot downgrade.
     #[serde(default)]
     pub launch_permits_required: bool,
@@ -154,6 +158,7 @@ impl Host {
                 && config.guardian_binary.is_absolute(),
             "invalid real host configuration"
         );
+        capabilities::preflight(&config)?;
         for image in config.images.values() {
             Manifest {
                 launch_permit: None,
@@ -368,6 +373,18 @@ impl Host {
         ) {
             return Err(Status::invalid_argument(
                 "resources outside real VM envelope",
+            ));
+        }
+        if let Some(capabilities) = &c.capabilities
+            && !capabilities.supports(
+                &request.image_digest,
+                u64::from(r.vcpu),
+                r.memory_mib,
+                r.disk_mib,
+            )
+        {
+            return Err(Status::failed_precondition(
+                "host image/resource compatibility mismatch",
             ));
         }
         deadline(request.allocation_expires_unix_ms)?;
@@ -981,6 +998,8 @@ impl Supervisor for Host {
     async fn health(&self, _: Request<HealthRequest>) -> Result<Response<HostInfo>, Status> {
         self.work(|h| {
             drop(h.journal()?);
+            capabilities::preflight(&h.inner.config)
+                .map_err(|_| Status::unavailable("host capability preflight failed"))?;
             if h.inner.authority.is_some() {
                 h.allocation_authority_sync(
                     sandbox_protocol::supervisor::AllocationAuthorityRequest {
@@ -991,6 +1010,15 @@ impl Supervisor for Host {
                 )?;
             }
             Ok(HostInfo {
+                capabilities_json: h
+                    .inner
+                    .config
+                    .capabilities
+                    .as_ref()
+                    .map(sandbox_protocol::host_capabilities::Capabilities::to_json)
+                    .transpose()
+                    .map_err(|_| Status::unavailable("host capability contract failed"))?
+                    .unwrap_or_default(),
                 launch_permits_required: h.inner.authority.is_some(),
                 host_id: h.inner.config.host.to_string(),
                 supervisor_epoch: h.inner.config.epoch,
