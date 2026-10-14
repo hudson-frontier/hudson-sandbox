@@ -21,7 +21,26 @@ async fn due(f: &Fixture) {
 async fn ready(pool: &PgPool) -> Fixture {
     let f = Fixture::new(pool).await;
     f.admit().await;
-    assert_eq!(f.controller().await.tick().await.unwrap(), Tick::Confirmed);
+    let (claim, mut request) = f.prepared().await;
+    // Normal renewal cases need a deadline within the 30-second horizon. Use
+    // a consistent shorter initial lease in both durable state and the fake,
+    // rather than waiting for the real 60-second boot window to elapse.
+    request.allocation_expires_unix_ms = sandbox_fake_host::unix_ms().unwrap() + 20_000;
+    sqlx::query("UPDATE allocations SET lease_expires_at=to_timestamp($1::double precision/1000)")
+        .bind(request.allocation_expires_unix_ms as f64)
+        .execute(pool)
+        .await
+        .unwrap();
+    let observation = f
+        .fake
+        .create(Request::new(request))
+        .await
+        .unwrap()
+        .into_inner();
+    f.store
+        .record_create_observation(&claim, &observation, true)
+        .await
+        .unwrap();
     due(&f).await;
     f
 }
@@ -86,8 +105,11 @@ async fn running_allocation_renews_without_reopening_create(pool: PgPool) {
 }
 
 #[sqlx::test(migrator = "sandbox_store::MIGRATOR")]
-async fn early_renewal_preserves_the_initial_guardian_deadline(pool: PgPool) {
-    let f = ready(&pool).await;
+async fn early_maintenance_inspects_without_reconverting_the_guardian_deadline(pool: PgPool) {
+    let f = Fixture::new(&pool).await;
+    f.admit().await;
+    assert_eq!(f.controller().await.tick().await.unwrap(), Tick::Confirmed);
+    due(&f).await;
     let (before, now): (i64, i64) = sqlx::query_as(
         "SELECT floor(extract(epoch FROM lease_expires_at)*1000)::bigint,
         floor(extract(epoch FROM clock_timestamp())*1000)::bigint FROM allocations",
@@ -97,25 +119,34 @@ async fn early_renewal_preserves_the_initial_guardian_deadline(pool: PgPool) {
     .unwrap();
     assert!(before > now + 30_000, "exercise the longer boot lease");
     let deadline = sandbox_supervisor::lease::Deadline::new(before, now, 100).unwrap();
-    let (claim, request) = prepared(&f).await;
-    assert_eq!(request.allocation_expires_unix_ms, before);
-    // Use the real guardian's monotonic deadline implementation, not only the
-    // simulator's returned observation, to demonstrate that it accepts this
-    // early request and that the old shorter horizon is rejected.
+    let prior = deadline.value();
+    // Even equal Unix expiry can be a shorter monotonic deadline after a
+    // one-millisecond change in the relationship between the clock samples.
     assert!(
         deadline
-            .extend(deadline.value(), now + 30_000, now as u64, 100)
+            .extend(prior, before, (now + 2) as u64, 101)
             .is_err()
     );
-    deadline
-        .extend(
-            deadline.value(),
-            request.allocation_expires_unix_ms,
-            now as u64,
-            100,
-        )
-        .unwrap();
-    let observation = observe(&f, request).await;
+    let claim = claim(&f, 30).await;
+    let LeaseAction::Inspect(owner) = f.store.prepare_lease(&claim).await.unwrap() else {
+        panic!("early maintenance must not send an unchanged renewal")
+    };
+    let (pending, no_request): (bool, bool) =
+        sqlx::query_as("SELECT renewal_pending,lease_requested_until IS NULL FROM allocations")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert!(!pending && no_request);
+    let observation = f
+        .fake
+        .inspect_lease(Request::new(
+            sandbox_protocol::supervisor::LeaseInspection {
+                ownership: Some(owner),
+            },
+        ))
+        .await
+        .unwrap()
+        .into_inner();
     assert_eq!(observation.allocation_expires_unix_ms, before);
     assert_eq!(
         f.store
@@ -133,6 +164,7 @@ async fn early_renewal_preserves_the_initial_guardian_deadline(pool: PgPool) {
     .unwrap();
     assert_eq!(state, "running");
     assert!(!pending);
+    assert_eq!(deadline.value(), prior);
     assert_eq!(f.fake.total_starts().await, 1);
 }
 
