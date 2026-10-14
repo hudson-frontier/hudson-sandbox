@@ -76,3 +76,43 @@ These are observed configuration and basic lifecycle facts. Hostile CPU, memory,
 The first experiment incorrectly treated the jailer's successful exit as microVM completion. With `--new-pid-ns`, the jailer parent returned status 0 while the Firecracker child was still booting and its cgroup remained populated. The corrected experiment acted as a child subreaper, read the jailer-recorded child PID, waited for that actual child, and checked cgroup emptiness before cleanup.
 
 The production supervisor must account for this behavior. A launcher acknowledgement or exit is not readiness, workload success, or release evidence. Persist ownership and launch intent, retain a reliable child identity, reconcile after restart, and prove the owned allocation has stopped before releasing capacity. Do not use an arbitrary PID file as authority to signal unrelated host processes; kernel process identity and allocation/cgroup ownership must be verified. The existing [controller evidence contract](controller.md#completion-and-uncertainty) remains authoritative.
+
+## Prepare the pinned controlled-test artifacts
+
+The opt-in helper downloads the exact aarch64 Firecracker 1.17.0 archive and
+6.1.186 kernel URLs/hashes recorded in the boot evidence. It accepts only a new
+absolute destination under an existing canonical parent, verifies bounded HTTPS
+downloads before writing, verifies extracted binary hashes from the tracked
+public-execute evidence, selects only the two exact regular binary members
+without extracting archive paths, and refuses overwrite. If publication fails, it leaves the partial destination
+for operator inspection; it never deletes that destination or retries over it.
+It runs without sudo
+and never creates or starts a VM. It does not build a production guest image,
+attest the upstream kernel, or support x86_64; reviewed pins for that architecture
+remain separate work. Network access is explicit when invoking it.
+Native `arm64`/`ARM64` host labels are accepted as aliases for `aarch64`, so
+preparing those same artifacts on an ARM host does not require a spelling override.
+
+Run inside the development Linux host, with trusted operator-selected paths:
+
+```sh
+python3 scripts/prepare_runtime_artifacts.py \
+  --architecture aarch64 --destination /absolute/new/runtime-artifacts
+cargo build --locked --release -p sandbox-guest
+export HUDSON_GUARDIAN_ARTIFACT_DIR=/absolute/new/runtime-artifacts
+export HUDSON_GUARDIAN_GUEST_BINARY=/absolute/source/target/release/sandbox-guest
+```
+
+The root-only VM test fixture requires these absolute paths and validates pinned
+Firecracker, jailer and kernel hashes. The guest binary remains a reviewed local
+build; the fixture constructs a disposable BusyBox image containing that binary
+and its local runtime libraries. Supply the environment explicitly through your
+reviewed root test invocation; do not preserve an entire untrusted environment.
+The fixture still requires aarch64 Linux/KVM, BusyBox, e2fsprogs and its dedicated
+cgroup parent. Database and private object-storage configuration are independent
+prerequisites for API/output/file cases. No helper supplies credentials or runs
+privileged tests automatically.
+
+```sh
+python3 -m unittest discover -s scripts -p test_runtime_artifacts.py
+```

@@ -36,7 +36,7 @@ reset-db: ## Drop and recreate the development schema
 	docker compose exec -T postgres psql -U sandbox -d sandbox -q \
 		-c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
-check: api sdk-check lint test docs doctor-check ## Everything CI checks
+check: runtime-artifacts-test api sdk-check lint test docs doctor-check ## Everything CI checks
 
 docs: ## Documentation link and fence checks
 	python3 scripts/check_docs.py
@@ -78,3 +78,7 @@ sdk-check: ## Check SDK parsing, types and unpublished package installation
 	PYTHONPATH=sdk/python/src .venv-sdk/bin/python -m unittest discover -s sdk/python/tests
 	npm test --prefix sdk/typescript
 	.venv-sdk/bin/python scripts/check_sdk_packages.py
+
+.PHONY: runtime-artifacts-test
+runtime-artifacts-test: ## Test pinned runtime preparation without network or privilege
+	python3 -m unittest discover -s scripts -p test_runtime_artifacts.py
