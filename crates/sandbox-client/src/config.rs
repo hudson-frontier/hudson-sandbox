@@ -118,6 +118,7 @@ pub(super) fn load(path: &Path) -> Result<Client, Error> {
     Ok(Client {
         http: builder.build().map_err(|_| Error::Config)?,
         origin,
+        project_id: credential.project_id,
         token,
         request_timeout: Duration::from_secs(config.request_timeout_seconds),
     })

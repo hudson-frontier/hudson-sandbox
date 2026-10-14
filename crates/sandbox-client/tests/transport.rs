@@ -508,3 +508,27 @@ async fn expired_response_retains_original_handle_but_never_reflects_arbitrary_i
     assert_eq!(error.operation_id(), None);
     assert!(!format!("{error:?} {error}").contains("private-backend-text"));
 }
+
+#[tokio::test]
+async fn identity_is_normalized_credential_free_and_bound_to_the_loaded_client() {
+    let s = Server::start(Router::new()).await;
+    s.edit_config(|v| v["endpoint"] = "https://EXAMPLE.COM:443".into());
+    let client = s.client();
+    assert_eq!(client.identity().origin, "https://example.com/");
+    assert_eq!(client.identity().project_id, "prj_test");
+    assert_eq!(client.clone().identity(), client.identity());
+    assert!(!format!("{:?}", client.identity()).contains("test-private-credential"));
+    let credential = s.directory.path().join("credential.json");
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&credential).unwrap()).unwrap();
+    value["token"] = "rotated-private-credential".into();
+    private(&credential, &serde_json::to_vec(&value).unwrap());
+    assert_eq!(s.client().identity(), client.identity());
+    value["project_id"] = "prj_other".into();
+    private(&credential, &serde_json::to_vec(&value).unwrap());
+    assert_eq!(client.identity().project_id, "prj_test");
+    assert_ne!(s.client().identity(), client.identity());
+    s.edit_config(|v| v["endpoint"] = "https://example.com:8443".into());
+    assert_eq!(s.client().identity().origin, "https://example.com:8443/");
+    assert_eq!(client.identity().origin, "https://example.com/");
+}

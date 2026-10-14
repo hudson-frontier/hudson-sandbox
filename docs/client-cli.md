@@ -125,3 +125,18 @@ Use `sandbox_client::Client::from_config`, generated `models` and `requests`, an
 [OpenAPI generation](openapi.md) emits both client models and request methods. Model output is identical to the API's shared wire models, preserving command defaults/order and omission/null behavior. The finite generator rejects unsupported request media, parameter locations and ambiguous success shapes. Manual code owns trust, transport bounds, waits, stream decoding and file verification.
 
 [Transport tests](../crates/sandbox-client/tests/transport.rs) exercise real local TLS, credential file restrictions, redirects, lost replies, timeouts, binary framing, partial SSE frames, capture expiry and digest corruption. [CLI tests](../crates/sandbox-cli/tests/cli.rs) run the actual binary through TLS/API/PostgreSQL across all 14 routes, verify retry identity, preserve binary bytes and distinguish command outcomes. Their guest/file/output adapters are synthetic. These tests do not validate hostile workload isolation, installer behavior or supported production hosts. The [language client guide](language-clients.md) describes the shared three-language conformance corpus and additional API integration. Distribution remains unfinished.
+
+## Rust client identity for recovery
+
+`Client::identity()` returns a borrowed `ClientIdentity` with `origin: &str` and
+`project_id: &str`. The origin is the validated HTTPS URL normalized by the client
+(including a trailing slash and omission of the default port). The project is the
+credential file's declared project; server authorization remains authoritative.
+Neither field exposes a token, credential path or TLS material. The identity is
+fixed when the client loads its configuration and is preserved by clones.
+
+Harnesses own canonical profile hashing and durable binding. Compare the loaded
+client identity with that binding before any recovery lookup or request. Reloading
+changed origin/project configuration produces a different identity. Rotating the
+token within the same origin/project does not change these two fields; this accessor
+does not establish credential or CA continuity.
