@@ -35,6 +35,9 @@ enum Command {
 struct ServeArgs {
     #[arg(long, default_value = "127.0.0.1:8443")]
     bind: SocketAddr,
+    /// Optional loopback-only HTTP liveness and database-readiness probes.
+    #[arg(long, value_parser = sandbox_api::health::loopback_address)]
+    health_bind: Option<SocketAddr>,
     #[arg(long)]
     tls_cert: PathBuf,
     #[arg(long)]
@@ -90,6 +93,7 @@ async fn main() -> anyhow::Result<()> {
         Command::Serve(args) => {
             let ServeArgs {
                 bind,
+                health_bind,
                 tls_cert,
                 tls_key,
                 image_digest,
@@ -150,15 +154,41 @@ async fn main() -> anyhow::Result<()> {
             let listener = tokio::net::TcpListener::bind(bind)
                 .await
                 .context("binding HTTPS listener")?;
+            let health_listener = match health_bind {
+                Some(address) => Some(
+                    tokio::net::TcpListener::bind(address)
+                        .await
+                        .context("binding health listener")?,
+                ),
+                None => None,
+            };
             tracing::info!(address = %listener.local_addr()?, "sandbox API listening over HTTPS");
-            serve(
-                listener,
-                acceptor,
-                router_with_uploads(AppState { store, images }, output, live, files, sources),
-                ServerLimits::default(),
-                shutdown,
-            )
-            .await?;
+            let app = router_with_uploads(
+                AppState {
+                    store: store.clone(),
+                    images,
+                },
+                output,
+                live,
+                files,
+                sources,
+            );
+            match health_listener {
+                Some(health_listener) => {
+                    tracing::info!(health_address = %health_listener.local_addr()?, "local API health listener ready");
+                    sandbox_api::health::serve(
+                        listener,
+                        acceptor,
+                        app,
+                        ServerLimits::default(),
+                        health_listener,
+                        store,
+                        shutdown,
+                    )
+                    .await?;
+                }
+                None => serve(listener, acceptor, app, ServerLimits::default(), shutdown).await?,
+            }
         }
         Command::ProvisionProject {
             name,

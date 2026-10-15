@@ -4,7 +4,7 @@ Status: implemented for create, execute, cancel, destroy, status, collections, o
 
 ## Transport contract
 
-`sandbox-api serve` requires a PEM certificate chain, a matching PEM private key, `DATABASE_URL` in its environment, and one or more `--image-digest` arguments. The [image policy](api-contract.md#implemented-image-admission) is mandatory and immutable until restart. TLS material and image configuration are checked before database access; migrations must finish before the socket is bound. Bad configuration or unavailable storage exits with a nonzero status. No plaintext listener or authentication bypass exists.
+`sandbox-api serve` requires a PEM certificate chain, a matching PEM private key, `DATABASE_URL` in its environment, and one or more `--image-digest` arguments. The [image policy](api-contract.md#implemented-image-admission) is mandatory and immutable until restart. TLS material and image configuration are checked before database access; migrations must finish before the socket is bound. Bad configuration or unavailable storage exits with a nonzero status. Project routes require HTTPS and authentication. Operators can separately enable the local health listener described below.
 
 The default bind address is `127.0.0.1:8443`. `--bind` can select a different IP address and port. A non-loopback bind is an explicit operator choice; use a certificate valid for the service hostname and configure host access controls before exposing it. The server supports HTTP/1.1 over TLS 1.2 or 1.3. It does not trust forwarded identity headers or accept client certificates as project credentials: the existing bearer-token checks run on every request.
 
@@ -23,6 +23,23 @@ The HTTPS transport has fixed bounds; SSE adds its own body/session limits:
 The [transport implementation](../crates/sandbox-api/src/server.rs) uses Rustls and [Hyper's HTTP/1 connection builder](https://docs.rs/hyper/1.11.1/hyper/server/conn/http1/struct.Builder.html). These bounds are not per-project rate limits, admission quotas, a load benchmark, or protection against every denial-of-service attack. [Implemented SSE](api-contract.md#implemented-output-streams) has its own stream lifetime and revocation policy.
 
 A timeout, disconnect, or forced shutdown can occur after a database commit. Recover a mutation using its original idempotency key and payload; do not infer cancellation from a transport failure. JSON extraction failures return generic `400 bad_request` problems; body-limit failures return `413` problems. Protocol-level failures such as malformed HTTP headers can close the connection or use Hyper's plain protocol error response. API responses do not include raw parser input. Logs omit request headers, bodies, query strings, and database configuration; the binary deliberately does not enable wire-level debug logging from `RUST_LOG`.
+
+## Local operator health probes
+
+Pass `--health-bind 127.0.0.1:8081` to enable a separate HTTP listener. It is disabled by default, accepts only explicit loopback IP addresses (including `[::1]`), and rejects wildcard or public addresses before configuration files or storage are accessed. The startup log reports its actual address; port `0` selects an available port. Both listeners start only after configuration and migrations succeed. An occupied health port fails startup rather than silently disabling the probes.
+
+| Request | Success means | Dependency failure |
+| --- | --- | --- |
+| `GET /livez` | The local API process can answer HTTP requests | PostgreSQL availability does not affect this response |
+| `GET /readyz` | The API is accepting requests and its PostgreSQL pool completed `SELECT 1` within 500 ms, including connection acquisition | `503` with the fixed body `unavailable` |
+
+Successful probes return `200`, the fixed body `ok`, and `Cache-Control: no-store`. `HEAD` has the same status without a body; other methods receive `405`. The health listener has no Project routes or bearer-token processing. Keep it local and configure operator probes without project credentials. The HTTPS listener continues to require bearer tokens for Project routes; these health paths are absent there.
+
+Only one readiness check can use the database pool at a time. Concurrent checkers receive `503` immediately. The health transport permits 16 connections, bounds headers and handlers to 1 second and entire connections to 2 seconds, and drains for at most 1 second. Database failures are redacted and do not stop liveness or kill the API; readiness recovers after storage becomes available. SIGINT/SIGTERM withdraw readiness and stop both listeners before their active connections drain. Failure of either listener also stops the other.
+
+Use liveness to detect an unresponsive process and readiness to withdraw API traffic during a database outage. Readiness does not prove schema/write permissions, controller or host availability, object storage health, sandbox execution, service readiness, or isolation qualification. Continue polling the admitted operation and inspecting the sandbox's authenticated observations for VM readiness. An unhealthy probe does not cancel accepted work or justify resubmitting a mutation with a new key.
+
+The [probe tests](../crates/sandbox-api/tests/health.rs) cover route separation, database failure and recovery, time bounds and coordinated shutdown. The [HTTPS binary test](../crates/sandbox-api/tests/server.rs) exercises the optional flag and SIGTERM with authenticated routes. Local probes are an operator diagnostic, not completion of the installation or backup/restore gates.
 
 ## Offline project provisioning
 

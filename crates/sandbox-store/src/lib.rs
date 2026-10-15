@@ -95,6 +95,16 @@ impl Store {
         MIGRATOR.run(&self.pool).await.map_err(StoreError::Migrate)
     }
 
+    /// Verify that a pooled connection can complete a query. The caller owns the deadline.
+    /// This does not certify schema compatibility, write access, or runtime health.
+    pub async fn check_connection(&self) -> Result<(), StoreError> {
+        sqlx::query("SELECT 1")
+            .execute(&self.pool)
+            .await
+            .map_err(StoreError::Query)?;
+        Ok(())
+    }
+
     /// The underlying pool, for queries elsewhere in this crate's callers.
     #[must_use]
     pub fn pool(&self) -> &Pool<Postgres> {

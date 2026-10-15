@@ -3,6 +3,8 @@ import copy
 import json
 from pathlib import Path
 import unittest
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 from jsonschema import ValidationError
 from generate_api import render, rust_type, render_requests
 from generate_clients import profiles, render_python, render_typescript
@@ -98,6 +100,31 @@ class ContractTests(unittest.TestCase):
             spec=copy.deepcopy(SPEC);mutate(spec)
             with self.assertRaises(AssertionError):
                 check_registered_routes(spec)
+
+    def test_operator_inventory_cannot_hide_extra_or_misplaced_project_routes(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root/'crates/sandbox-api/src'
+            source.mkdir(parents=True)
+            project = '.route("/v1/test", get(handler))'
+            probes = '.route("/livez", get(live)).route("/readyz", get(ready))'
+            spec = {'paths':{'/v1/test':{'get':{}}}}
+            with patch('check_api.ROOT', root):
+                (source/'lib.rs').write_text(project)
+                (source/'health.rs').write_text(probes)
+                check_registered_routes(spec)
+                for bad in [probes+'.route("/secret", get(secret))', probes.replace('/readyz','/ready'), probes+'.route("/v1/test", post(handler))', '.route(path, get(handler))']:
+                    with self.subTest(source=bad), self.assertRaises(AssertionError):
+                        (source/'health.rs').write_text(bad)
+                        check_registered_routes(spec)
+                (source/'health.rs').write_text(probes)
+                (source/'extra.rs').write_text('.route("/livez", get(live))')
+                with self.assertRaises(AssertionError):
+                    check_registered_routes(spec)
+                (source/'extra.rs').unlink()
+                (source/'health.rs').unlink()
+                with self.assertRaises(AssertionError):
+                    check_registered_routes(spec)
 
     def test_external_refs_and_auth_overrides_fail(self):
         for mutate in [lambda s:s['components']['schemas'].update({'Remote':{'$ref':'https://example.invalid/schema'}}), lambda s:s['paths']['/v1/sandboxes']['get'].update({'security':[]})]:

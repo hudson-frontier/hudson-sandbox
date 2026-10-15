@@ -113,6 +113,30 @@ pub async fn serve(
     limits: ServerLimits,
     shutdown: impl Future<Output = ()> + Send,
 ) -> anyhow::Result<()> {
+    serve_transport(listener, Some(acceptor), app, limits, shutdown).await
+}
+
+/// Used exclusively by the optional loopback operator probes.
+pub(crate) async fn serve_plain(
+    listener: TcpListener,
+    app: Router,
+    limits: ServerLimits,
+    shutdown: impl Future<Output = ()> + Send,
+) -> anyhow::Result<()> {
+    ensure!(
+        listener.local_addr()?.ip().is_loopback(),
+        "health listener must use a loopback address"
+    );
+    serve_transport(listener, None, app, limits, shutdown).await
+}
+
+async fn serve_transport(
+    listener: TcpListener,
+    acceptor: Option<TlsAcceptor>,
+    app: Router,
+    limits: ServerLimits,
+    shutdown: impl Future<Output = ()> + Send,
+) -> anyhow::Result<()> {
     limits.validate()?;
     let app = app
         .layer(DefaultBodyLimit::max(64 * 1024))
@@ -141,22 +165,16 @@ pub async fn serve(
                 tasks.spawn(async move {
                     let _permit = permit;
                     let work = async {
-                        let tls = tokio::select! {
-                            biased;
-                            _ = stopping.changed() => return,
-                            result = timeout(limits.handshake, acceptor.accept(socket)) => match result { Ok(Ok(tls)) => tls, _ => return },
-                        };
-                        let mut builder = hyper::server::conn::http1::Builder::new();
-                        builder.timer(TokioTimer::new()).header_read_timeout(limits.headers).max_headers(64).max_buf_size(32 * 1024);
-                        let connection = builder.serve_connection(TokioIo::new(tls), TowerToHyperService::new(app));
-                        tokio::pin!(connection);
-                        tokio::select! {
-                            biased;
-                            _ = stopping.changed() => {
-                                connection.as_mut().graceful_shutdown();
-                                let _ = connection.await;
+                        match acceptor {
+                            Some(acceptor) => {
+                                let tls = tokio::select! {
+                                    biased;
+                                    _ = stopping.changed() => return,
+                                    result = timeout(limits.handshake, acceptor.accept(socket)) => match result { Ok(Ok(tls)) => tls, _ => return },
+                                };
+                                serve_connection(tls, app, limits, &mut stopping).await;
                             }
-                            _ = &mut connection => {}
+                            None => serve_connection(socket, app, limits, &mut stopping).await,
                         }
                     };
                     let _ = timeout(limits.connection, work).await;
@@ -176,4 +194,30 @@ pub async fn serve(
         while tasks.join_next().await.is_some() {}
     }
     result
+}
+
+async fn serve_connection<S>(
+    socket: S,
+    app: Router,
+    limits: ServerLimits,
+    stopping: &mut watch::Receiver<bool>,
+) where
+    S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
+{
+    let mut builder = hyper::server::conn::http1::Builder::new();
+    builder
+        .timer(TokioTimer::new())
+        .header_read_timeout(limits.headers)
+        .max_headers(64)
+        .max_buf_size(32 * 1024);
+    let connection = builder.serve_connection(TokioIo::new(socket), TowerToHyperService::new(app));
+    tokio::pin!(connection);
+    tokio::select! {
+        biased;
+        _ = stopping.changed() => {
+            connection.as_mut().graceful_shutdown();
+            let _ = connection.await;
+        }
+        _ = &mut connection => {}
+    }
 }

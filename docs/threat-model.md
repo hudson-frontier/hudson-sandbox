@@ -32,7 +32,7 @@ The security requirements were previously spread across several documents. This 
 
 ## Trust boundaries
 
-1. **Client to API.** Every request authenticated; no unauthenticated path exists in any environment, including local development.
+1. **Client to API.** Every Project API request is authenticated, including local development. The optional [operator health listener](api-server.md#local-operator-health-probes) binds only to loopback and exposes fixed liveness/readiness responses without credentials. It has no Project routes, identifiers, lifecycle data or mutation authority; it must not be forwarded to public or guest networks.
 2. **API and controller to supervisor.** Separate service credentials. Supervisor endpoints reject project and admin credentials.
 3. **Supervisor to guest.** The guest is untrusted. Guest messages never grant host authority, and the guest holds no PostgreSQL or object-storage credentials.
 4. **Guest agent to customer processes.** The agent stays outside the frozen customer process groups. It does not stay outside customer *privilege* — the customer is root in the same VM — so this is the weakest line in the design and the one most in need of the Phase 0 spikes. [Lifecycle](lifecycle.md#resume) owns the contract; [architecture](architecture.md#privilege-layers-inside-a-sandbox) owns the layering.
