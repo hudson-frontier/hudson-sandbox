@@ -193,6 +193,9 @@ impl Store {
             .bind(if immediate {None} else {Some(operation.uuid())}).bind(immediate).execute(&mut *tx).await?;
         }
         tx.commit().await?;
+        if !immediate {
+            self.notify_work().await;
+        }
         Ok(DestroyAdmission::Accepted {
             operation_id: operation,
             status: if immediate { "succeeded" } else { "queued" }.into(),

@@ -27,7 +27,7 @@ serde_json = { workspace = true }
 [dev-dependencies]
 sandbox-client = { workspace = true }
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["process"] }
+tokio = { workspace = true, features = ["process", "test-util"] }
 sandbox-cleanup = { path = "../sandbox-cleanup" }
 reqwest.workspace = true
 sandbox-api = { path = "../sandbox-api" }
