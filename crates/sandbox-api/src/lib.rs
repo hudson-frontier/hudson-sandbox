@@ -10,6 +10,7 @@ pub mod destroy;
 pub mod execute;
 pub mod files;
 pub mod headers;
+pub mod health;
 pub mod lists;
 pub mod outputs;
 pub mod problem;

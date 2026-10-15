@@ -696,7 +696,14 @@ async fn binary_provisions_serves_and_stops_on_sigterm(pool: PgPool) {
     assert!(!String::from_utf8_lossy(&output.stdout).contains(&token));
     assert!(!String::from_utf8_lossy(&output.stderr).contains(&token));
     let mut child = tokio::process::Command::new(env!("CARGO_BIN_EXE_sandbox-api"))
-        .args(["serve", "--bind", "127.0.0.1:0", "--tls-cert"])
+        .args([
+            "serve",
+            "--bind",
+            "127.0.0.1:0",
+            "--health-bind",
+            "127.0.0.1:0",
+            "--tls-cert",
+        ])
         .arg(&cert_path)
         .arg("--tls-key")
         .arg(&key_path)
@@ -723,6 +730,34 @@ async fn binary_provisions_serves_and_stops_on_sigterm(pool: PgPool) {
     })
     .await
     .unwrap();
+    let health_address = timeout(Duration::from_secs(2), async {
+        loop {
+            let line = lines
+                .next_line()
+                .await
+                .unwrap()
+                .expect("health startup log");
+            if let Some((_, address)) = line.split_once("health_address=") {
+                break address.trim().parse::<SocketAddr>().unwrap();
+            }
+        }
+    })
+    .await
+    .unwrap();
+    let mut health_socket = TcpStream::connect(health_address).await.unwrap();
+    health_socket
+        .write_all(b"GET /readyz HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n")
+        .await
+        .unwrap();
+    let mut health_response = Vec::new();
+    timeout(
+        Duration::from_secs(2),
+        health_socket.read_to_end(&mut health_response),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    assert!(health_response.starts_with(b"HTTP/1.1 200"));
     let mut roots = rustls::RootCertStore::empty();
     roots.add(cert.cert.der().clone()).unwrap();
     let client = connector(roots);
