@@ -65,6 +65,20 @@ class ContractTests(unittest.TestCase):
             with self.subTest(name=name),self.assertRaises(ValidationError):
                 check_schema(SPEC,{'$ref':'#/components/schemas/'+name},bad)
 
+    def test_execute_generation_preconditions_are_positive_nonnullable_and_optional(self):
+        schema = {'$ref':'#/components/schemas/CommandInput'}
+        body = {'argv':['true'],'deadline_unix_ms':1}
+        check_schema(SPEC, schema, body)
+        check_schema(SPEC, schema, {**body, 'expected_generation':9223372036854775807})
+        for generation in [None, 0, -1, True, '1', 1.5, 9223372036854775808]:
+            with self.subTest(generation=generation), self.assertRaises(ValidationError):
+                check_schema(SPEC, schema, {**body, 'expected_generation':generation})
+        for change in [{'x-rust-default':True,'default':1}, {'anyOf':[{'type':'integer'},{'type':'null'}]}]:
+            spec = copy.deepcopy(SPEC)
+            spec['components']['schemas']['CommandInput']['properties']['expected_generation'].update(change)
+            with self.assertRaises(ValueError):
+                render(spec)
+
     def test_workspace_path_shape_excludes_ambiguous_names(self):
         schema={'$ref':'#/components/schemas/WorkspacePath'}
         check_schema(SPEC,schema,'dir/file.bin')

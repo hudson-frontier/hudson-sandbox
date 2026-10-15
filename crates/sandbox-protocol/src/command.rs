@@ -3,6 +3,10 @@ pub use crate::api::CommandInput;
 use crate::{Id, OperationId, guest_model::Execute};
 use serde::{Deserialize, Serialize};
 
+#[cfg(test)]
+#[path = "command_generation_tests.rs"]
+mod generation_tests;
+
 pub const MAX_OUTPUT: u64 = 10 * 1024 * 1024;
 pub const MAX_DURATION_MS: i64 = 6 * 60 * 60 * 1000;
 impl CommandInput {
@@ -19,6 +23,11 @@ impl CommandInput {
     /// Shape only. Database time checks a new deadline after idempotency lookup;
     /// retries retain their original handle even after the command deadline.
     pub fn validate(&self) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            self.expected_generation
+                .is_none_or(|generation| generation > 0),
+            "expected generation must be positive"
+        );
         anyhow::ensure!(
             self.output_limit <= MAX_OUTPUT,
             "output limit exceeds public cap"

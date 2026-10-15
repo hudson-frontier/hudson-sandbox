@@ -33,6 +33,8 @@ Successful tool transport is not successful execution. Returned operations may b
 
 Results carry `untrusted_data: true`. Guest bytes are base64 with provenance metadata, never prompts, resource links or automatically executed instructions. Diagnostics contain no configuration, bearer credential, raw exception, HTTP problem title or arbitrary error code. Sanitized SDK error fields preserve denial, revocation, expiry, missing output, integrity failure and uncertainty. The local MCP host must be trusted: it can request all operations allowed by the selected project credential.
 
+The `execute` body accepts optional `expected_generation`, a positive integer at most `9007199254740991` for the adapter's safe JSON numeric profile. Save the inspected generation with the original key/payload. Stale new admission returns `sandbox_generation_mismatch`; it is never replaced by a retry against another generation. The full HTTP SDKs also support the API's signed 64-bit generation range. See the [generation contract](api-contract.md#execution-generation-precondition).
+
 ## Bounds
 
 One tool call executes at a time; concurrent calls return `busy` without HTTP. At most eight JSON-RPC IDs may be pending; duplicates are rejected. Malformed, oversized, duplicate-key or non-UTF-8 frames close the connection without echoing input. A connection failure may leave a sent mutation admitted; retain its identity even if no error arrives.

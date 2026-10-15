@@ -69,6 +69,8 @@ try {
 
 `ClientError.kind` distinguishes configuration, request, transport, HTTP, protocol, wait timeout, file and integrity failures. HTTP errors expose `status`, a safe known `code`, and a validated original handle (`operation_id` in Python, `operationId` in TypeScript) when supplied. Bounded unknown raw codes are available explicitly as `raw_code` / `rawCode`. Error messages and normal debug inspection omit backend titles, credentials and URLs. Response objects remain workload-controlled data; handle them explicitly. A transport/protocol failure after sending a mutation does not prove non-admission. Recover with its saved key and payload.
 
+To bind an execute request to the sandbox generation you inspected, include `expected_generation` in its saved command body: a positive Python `int`, TypeScript `bigint` (for example `1n`), or Rust `Some(1_i64)`. A new stale request returns HTTP `409` with code `sandbox_generation_mismatch`. Keep the precondition unchanged when reconciling a lost admission reply; an exact retry preserves its original operation. See the [generation contract](api-contract.md#execution-generation-precondition).
+
 ## Integer, streaming and file behavior
 
 The [executable Python recovery example](../sdk/python/examples/README.md) saves

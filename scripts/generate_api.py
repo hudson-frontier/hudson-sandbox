@@ -81,6 +81,10 @@ def render(doc):
              "fn required_nullable<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>",
              "where D: serde::Deserializer<'de>, T: Deserialize<'de> { Option::deserialize(deserializer) }", '']
     schemas = doc['components']['schemas']
+    if any(prop.get('x-rust-nonnull-option') for schema in schemas.values()
+           for prop in schema.get('properties', {}).values()):
+        lines += ["fn nonnull_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>",
+                  "where D: serde::Deserializer<'de>, T: Deserialize<'de> { T::deserialize(deserializer).map(Some) }", '']
     for name, schema in schemas.items():
         if not schema.get('x-rust-model'):
             continue
@@ -107,6 +111,10 @@ def render(doc):
             ty = rust_type(prop, schemas)
             optional = field not in required
             is_null = nullable(prop) is not None
+            if prop.get('x-rust-nonnull-option'):
+                if not optional or is_null or prop.get('x-rust-default') or not prop.get('x-rust-optional'):
+                    raise ValueError('nonnull-option requires an optional nonnullable field without a default')
+                lines.append('    #[serde(deserialize_with = "nonnull_option")]')
             if not optional and is_null:
                 lines.append('    #[serde(deserialize_with = "required_nullable")]')
             if optional and not prop.get('x-rust-default'):

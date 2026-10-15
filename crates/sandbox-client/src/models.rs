@@ -9,6 +9,14 @@ where
     Option::deserialize(deserializer)
 }
 
+fn nonnull_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Copy)]
 pub struct RequestedResources {
     pub vcpu: i32,
@@ -37,6 +45,10 @@ pub struct CommandInput {
     pub deadline_unix_ms: i64,
     #[serde(default = "command_input_output_limit_default")]
     pub output_limit: u64,
+    #[serde(deserialize_with = "nonnull_option")]
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expected_generation: Option<i64>,
 }
 fn command_input_env_default() -> std::collections::BTreeMap<String, String> {
     Default::default()

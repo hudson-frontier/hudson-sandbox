@@ -26,6 +26,9 @@ mod capacity;
 #[path = "support/history.rs"]
 mod history;
 
+#[path = "support/execute_generation.rs"]
+mod generation;
+
 fn now_ms() -> i64 {
     (OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000) as i64
 }

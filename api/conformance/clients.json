@@ -514,7 +514,7 @@
     "args": {
       "sandbox_id": "sbx_019a9fad-3000-7000-8000-000000000001",
       "idempotency_key": "persisted-mutation-key",
-      "path": "dir/a +é.bin",
+      "path": "dir/a +\u00e9.bin",
       "x_file_size": 3,
       "x_file_sha256": "2d28501a66adef190c7f5b220994e76d5cc30f1eb165a8ca6cab56dfd57092fe",
       "x_file_mode": "0755",
@@ -525,7 +525,7 @@
         "method": "PUT",
         "path": "/v1/sandboxes/sbx_019a9fad-3000-7000-8000-000000000001/files",
         "query": {
-          "path": "dir/a +é.bin"
+          "path": "dir/a +\u00e9.bin"
         },
         "headers": {
           "idempotency-key": "persisted-mutation-key",
@@ -1904,6 +1904,123 @@
       "exists_before": false,
       "sha256": "72a2f8d2643328a2e03dcb1b66fdc6610b95ba3019d88d8849ce060d0be634ce",
       "size": 40000
+    }
+  },
+  {
+    "name": "execute generation precondition preserves wide integers",
+    "action": "executeCommand",
+    "args": {
+      "sandbox_id": "sbx_019a9fad-3000-7000-8000-000000000001",
+      "idempotency_key": "persisted-mutation-key",
+      "body": {
+        "argv": [
+          "sh",
+          "-c",
+          "printf hi"
+        ],
+        "deadline_unix_ms": 4102444800000,
+        "expected_generation": 9007199254740993
+      }
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/v1/sandboxes/sbx_019a9fad-3000-7000-8000-000000000001/execute",
+        "query": {},
+        "headers": {
+          "idempotency-key": "persisted-mutation-key"
+        },
+        "body": {
+          "argv": [
+            "sh",
+            "-c",
+            "printf hi"
+          ],
+          "env": {},
+          "cwd": "/",
+          "deadline_unix_ms": 4102444800000,
+          "output_limit": 1048576,
+          "expected_generation": 9007199254740993
+        },
+        "response": {
+          "status": 202,
+          "headers": {
+            "cache-control": "no-store",
+            "content-type": "application/json"
+          },
+          "body": {
+            "sandbox_id": "sbx_019a9fad-3000-7000-8000-000000000001",
+            "operation_id": "op_019a9fad-3000-7000-8000-000000000002",
+            "status": "queued",
+            "status_url": "/v1/operations/op_019a9fad-3000-7000-8000-000000000002"
+          }
+        }
+      }
+    ],
+    "expected": {
+      "ok": {
+        "sandbox_id": "sbx_019a9fad-3000-7000-8000-000000000001",
+        "operation_id": "op_019a9fad-3000-7000-8000-000000000002",
+        "status": "queued",
+        "status_url": "/v1/operations/op_019a9fad-3000-7000-8000-000000000002"
+      }
+    }
+  },
+  {
+    "name": "execute generation mismatch is a typed denial",
+    "action": "executeCommand",
+    "args": {
+      "sandbox_id": "sbx_019a9fad-3000-7000-8000-000000000001",
+      "idempotency_key": "persisted-mutation-key",
+      "body": {
+        "argv": [
+          "sh",
+          "-c",
+          "printf hi"
+        ],
+        "deadline_unix_ms": 4102444800000,
+        "expected_generation": 9007199254740993
+      }
+    },
+    "requests": [
+      {
+        "method": "POST",
+        "path": "/v1/sandboxes/sbx_019a9fad-3000-7000-8000-000000000001/execute",
+        "query": {},
+        "headers": {
+          "idempotency-key": "persisted-mutation-key"
+        },
+        "body": {
+          "argv": [
+            "sh",
+            "-c",
+            "printf hi"
+          ],
+          "env": {},
+          "cwd": "/",
+          "deadline_unix_ms": 4102444800000,
+          "output_limit": 1048576,
+          "expected_generation": 9007199254740993
+        },
+        "response": {
+          "status": 409,
+          "headers": {
+            "cache-control": "no-store",
+            "content-type": "application/problem+json"
+          },
+          "body": {
+            "status": 409,
+            "code": "sandbox_generation_mismatch",
+            "title": "private-backend-text"
+          }
+        }
+      }
+    ],
+    "expected": {
+      "error": "http",
+      "status": 409,
+      "code": "sandbox_generation_mismatch",
+      "operation_id": null
     }
   }
 ]
