@@ -1,6 +1,6 @@
 # Whole-allocation retirement
 
-Status: database preparation, host fencing and recoverable guardian metadata deletion are implemented components. Database completion and the bounded forgetting store/RPC handoff are implemented. An opt-in controller worker now drives the handoff. Sustained end-to-end reuse remains incomplete. This document extends [history reclamation](history-reclamation.md) for the remaining host/guardian lifecycle work in [issue #79](https://github.com/hudson-infinity/hudson-sandbox/issues/79). It does not authorize manual deletion or claim a passing release gate.
+Status: database preparation, host fencing and recoverable guardian metadata deletion are implemented components. Database completion and the bounded forgetting store/RPC handoff are implemented. An opt-in controller worker now drives the handoff. Sustained end-to-end reuse remains incomplete. This document extends [history reclamation](history-reclamation.md) for the remaining host/guardian lifecycle work in [issue #79](https://github.com/hudson-frontier/hudsonbox/issues/79). It does not authorize manual deletion or claim a passing release gate.
 
 ## Problem and current ownership
 

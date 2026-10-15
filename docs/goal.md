@@ -4,7 +4,7 @@ Status: selected product direction; early implementation. The [documentation gui
 
 ## What we are building
 
-**Hudson Sandbox is a general-purpose secure runtime for untrusted workloads.**
+**Hudsonbox is a general-purpose secure runtime for untrusted workloads.**
 
 The product promise is: run untrusted code in isolated environments, with controlled resources, controlled connectivity, and a reliable lifecycle.
 

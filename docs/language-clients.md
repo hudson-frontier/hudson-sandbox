@@ -31,7 +31,7 @@ Python uses async snake_case methods and generated dataclasses:
 ```python
 import asyncio
 import json
-from hudson_sandbox import Client, models
+from hudsonbox import Client, models
 
 async def main():
     with open("saved-execute.json") as source:
@@ -51,7 +51,7 @@ TypeScript uses camelCase methods with snake_case wire fields. Input integer fie
 
 ```typescript
 import { readFile } from "node:fs/promises";
-import { Client, type Input, type CommandInput } from "@hudson-infinity/sandbox-client";
+import { Client, type Input, type CommandInput } from "@hudson-frontier/hudsonbox-client";
 
 // This saved request uses safe numeric values (including a millisecond deadline).
 const saved: { sandbox_id: string; idempotency_key: string; body: Input<CommandInput> } =

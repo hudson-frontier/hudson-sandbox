@@ -1,6 +1,6 @@
 # Pinned local guest image build
 
-This recipe builds our init/agent, Linux kernel and Debian slim ext4 filesystem for [issue #108](https://github.com/hudson-infinity/hudson-sandbox/issues/108). Inputs are pinned in [pins.json](pins.json); the build combines an architecture-specific Firecracker config with [our required settings](hardening.config). Authenticated API boot, native aarch64 build/execution and supported-host isolation/teardown qualification remain pending.
+This recipe builds our init/agent, Linux kernel and Debian slim ext4 filesystem for [issue #108](https://github.com/hudson-frontier/hudsonbox/issues/108). Inputs are pinned in [pins.json](pins.json); the build combines an architecture-specific Firecracker config with [our required settings](hardening.config). Authenticated API boot, native aarch64 build/execution and supported-host isolation/teardown qualification remain pending.
 
 On a native Linux builder with Git, Docker, Python and unprivileged `e2fsprogs` tools:
 

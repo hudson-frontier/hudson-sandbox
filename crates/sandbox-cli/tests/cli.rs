@@ -18,7 +18,7 @@ fn path(path: &Path) -> &str {
 async fn cli(s: &Server, args: &[&str], expected: i32) -> Vec<u8> {
     let output = tokio::time::timeout(
         Duration::from_secs(5),
-        tokio::process::Command::new(env!("CARGO_BIN_EXE_hudson-sandbox"))
+        tokio::process::Command::new(env!("CARGO_BIN_EXE_hudsonbox"))
             .args(["--config", path(&s.config), "--json"])
             .args(args)
             .output(),
@@ -328,7 +328,7 @@ async fn expired_retry_reports_original_operation_without_leaking_backend_text()
     }))).await;
     let request = s.directory.path().join("create.json");
     private(&request,&serde_json::to_vec(&json!({"image_digest":"sha256:fixture","resources":{"vcpu":1,"memory_mib":128,"disk_mib":64}})).unwrap());
-    let result = tokio::process::Command::new(env!("CARGO_BIN_EXE_hudson-sandbox"))
+    let result = tokio::process::Command::new(env!("CARGO_BIN_EXE_hudsonbox"))
         .args([
             "--config",
             path(&s.config),

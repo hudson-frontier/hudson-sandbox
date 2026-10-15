@@ -7,7 +7,7 @@ From the repository root on Unix or WSL:
 ```sh
 make mcp-setup
 .venv-mcp/bin/python -m pip install --no-deps --no-build-isolation ./sdk/python ./sdk/mcp
-.venv-mcp/bin/hudson-sandbox-mcp --config /absolute/private/client.json
+.venv-mcp/bin/hudsonbox-mcp --config /absolute/private/client.json
 ```
 
 Configure the MCP client to launch that absolute executable with the two arguments `--config` and the trusted configuration path. Configuration and credentials use the [ordinary SDK format](../python/README.md); files must belong to the current Unix user and have mode `0600`. Configure the HTTPS origin, project bearer credential and optional CA there. Do not paste tokens into tool calls, prompts, argv or a committed MCP client configuration.

@@ -11,7 +11,7 @@ from pathlib import Path
 import re
 import sys
 
-from hudson_sandbox import Client, ClientError, models, new_idempotency_key
+from hudsonbox import Client, ClientError, models, new_idempotency_key
 
 import recover_execute as state
 

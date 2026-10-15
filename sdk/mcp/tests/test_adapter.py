@@ -7,11 +7,11 @@ import unittest
 from pathlib import Path
 
 import httpx
-from hudson_sandbox import Client
+from hudsonbox import Client
 
-from hudson_sandbox_mcp.adapter import Adapter, result, server
-from hudson_sandbox_mcp.schemas import PREFIX, TOOLS, STRICT_VALIDATOR
-from hudson_sandbox_mcp.stdio import Frames, FrameError, MAX_FRAME_BYTES
+from hudsonbox_mcp.adapter import Adapter, result, server
+from hudsonbox_mcp.schemas import PREFIX, TOOLS, STRICT_VALIDATOR
+from hudsonbox_mcp.stdio import Frames, FrameError, MAX_FRAME_BYTES
 
 SB = "sbx_01996110-7c00-7000-8000-000000000001"
 OP = "op_01996110-7c00-7000-8000-000000000002"

@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         The runtime is not implemented yet. Identify whether this affects docs or implemented code.
-        Report vulnerabilities privately: https://github.com/hudson-infinity/hudson-sandbox/security/advisories/new
+        Report vulnerabilities privately: https://github.com/hudson-frontier/hudsonbox/security/advisories/new
         Do not include credentials or customer data.
   - type: textarea
     id: problem

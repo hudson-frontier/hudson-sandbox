@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import patch
 
 import httpx
-from hudson_sandbox import Client, ClientError
+from hudsonbox import Client, ClientError
 
 ROOT = Path(__file__).resolve().parents[3]
 EXAMPLES = ROOT / "sdk/python/examples"

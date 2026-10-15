@@ -1,4 +1,4 @@
-"""Hudson Sandbox asynchronous HTTPS client. No implicit mutation retries."""
+"""Hudsonbox asynchronous HTTPS client. No implicit mutation retries."""
 
 from .client import Client, new_idempotency_key
 from ._wire import ClientError, RangeChunk

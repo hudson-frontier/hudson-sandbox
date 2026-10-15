@@ -2,13 +2,13 @@
 
 The [separate Python package](../sdk/mcp/README.md) supplies stdio tools over the existing project-authenticated HTTPS SDK. A trusted operator launches it for a local MCP host with one private SDK configuration file. Tool calls cannot select an origin, project credential, CA, object-store bucket, local destination or supervisor endpoint. Files are workspace-relative paths in the selected sandbox. There is no network MCP listener or embedded harness.
 
-This deliberately revisits [ADR 0002](decisions/0002-no-mcp-server-initially.md) now that the HTTP API and conformance-tested clients exist, for [issue #113](https://github.com/hudson-infinity/hudson-sandbox/issues/113). Runtime networking, images, isolation and hardware qualification remain separate [roadmap gates](roadmap.md).
+This deliberately revisits [ADR 0002](decisions/0002-no-mcp-server-initially.md) now that the HTTP API and conformance-tested clients exist, for [issue #113](https://github.com/hudson-frontier/hudsonbox/issues/113). Runtime networking, images, isolation and hardware qualification remain separate [roadmap gates](roadmap.md).
 
 ## Protocol and versioning
 
 The maintained [official Python MCP SDK v2.3.0](https://github.com/modelcontextprotocol/python-sdk/releases/tag/v2.3.0) handles JSON-RPC, initialization, cancellation and discovery. The chosen interoperability baseline is [MCP 2025-11-25 stdio](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) and its [tools contract](https://modelcontextprotocol.io/specification/2025-11-25/server/tools), tested with the official SDK client in explicit legacy mode. The dependency also negotiates its newer supported protocol; the adapter exposes the same tools without modern-only subscriptions or server-initiated actions.
 
-Every tool begins `hudson_v1_`; every result has `schema_version: 1`. Authoritative closed input schemas live in [schemas.py](../sdk/mcp/src/hudson_sandbox_mcp/schemas.py) and are returned by tools/list. Unknown fields are rejected before HTTP. Breaking argument/result changes require a new tool name/version and updated fixtures; additive changes preserve old calls. Dependencies are pinned in [mcp-requirements.txt](../scripts/mcp-requirements.txt). Package version remains the repository's unpublished `0.0.0`.
+Every tool begins `hudson_v1_`; every result has `schema_version: 1`. Authoritative closed input schemas live in [schemas.py](../sdk/mcp/src/hudsonbox_mcp/schemas.py) and are returned by tools/list. Unknown fields are rejected before HTTP. Breaking argument/result changes require a new tool name/version and updated fixtures; additive changes preserve old calls. Dependencies are pinned in [mcp-requirements.txt](../scripts/mcp-requirements.txt). Package version remains the repository's unpublished `0.0.0`.
 
 ## Tool mapping
 

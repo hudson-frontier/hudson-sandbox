@@ -1,8 +1,8 @@
-# Hudson Sandbox
+# Hudsonbox
 
 **Run untrusted workloads in isolated environments.**
 
-Hudson Sandbox is a project from **Hudson Labs** building a general-purpose secure runtime for untrusted Linux workloads. Run scripts, applications, build jobs, automation, and services with controlled resources, controlled connectivity, and a reliable lifecycle. AI agents are one possible client.
+Hudsonbox is a project from **Hudson Labs** building a general-purpose secure runtime for untrusted Linux workloads. Run scripts, applications, build jobs, automation, and services with controlled resources, controlled connectivity, and a reliable lifecycle. AI agents are one possible client.
 
 **Status: early implementation.** PostgreSQL admission, authentication, status handlers, and the [create/destroy controller](docs/controller.md) have tests through an authenticated fake supervisor. The fake runs no customer code. The [HTTPS API and offline project provisioning](docs/api-server.md) now run as a standalone process. The [real Linux supervisor](docs/real-supervisor.md) now has controlled aarch64 evidence for API-created VM readiness, lease renewal and verified destruction. Public execute admission and status now connect to guest commands. Authenticated output reads, SSE streaming and an opt-in [output cleanup worker](docs/output-storage.md#cleanup-worker) are implemented. Command cancellation, [file uploads](docs/api-contract.md#implemented-file-uploads) and [captured downloads](docs/api-contract.md#implemented-file-downloads) are implemented; the [Rust client and project CLI](docs/client-cli.md) and [Python/TypeScript clients](docs/language-clients.md) cover the implemented API. History reclamation, package publication, management UI, and installer remain unfinished. The [development workload](docs/local-workload.md) provides a resumable client flow; isolation/performance qualification and a reproducible operator installation remain pending.
 
@@ -20,7 +20,7 @@ Your application      → Sandbox API → Controller → Firecracker microVM
                     Status, output, snapshots
 ```
 
-[Hudson](https://github.com/hudson-infinity/hudson) is the agent harness. Hudson Sandbox supplies the execution environment and works with other applications and harnesses too. Agent workflows and Temporal stay with the caller. Authentication is required everywhere, including local development.
+[Hudson](https://github.com/hudson-frontier/hudson) is the agent harness. Hudsonbox supplies the execution environment and works with other applications and harnesses too. Agent workflows and Temporal stay with the caller. Authentication is required everywhere, including local development.
 
 The selected stack is **Rust, Firecracker/Linux KVM, PostgreSQL with SQLx, and S3-compatible object storage**, with HTTP/JSON APIs. Customers get root inside their own sandbox, on a kernel and init that stay ours. We start with one x86_64 Linux compute host; Kubernetes deployment and multiple hosts follow a verified lifecycle.
 

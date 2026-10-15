@@ -4,16 +4,16 @@ Status: partially implemented. The standalone API/controller, SQLx storage, real
 
 ## Purpose and ownership
 
-Hudson Sandbox is a general-purpose secure runtime for untrusted Linux workloads. Scripts, applications, build jobs, automation, and services use the same core interfaces; AI agents are one possible client. [Product goal](goal.md) owns scope and priorities, including the initial secure execution milestone before pause/resume.
+Hudsonbox is a general-purpose secure runtime for untrusted Linux workloads. Scripts, applications, build jobs, automation, and services use the same core interfaces; AI agents are one possible client. [Product goal](goal.md) owns scope and priorities, including the initial secure execution milestone before pause/resume.
 
-**Hudson is the agent harness. Hudson Sandbox is a tool it calls.**
+**Hudson is the agent harness. Hudsonbox is a tool it calls.**
 
-Hudson Sandbox provides APIs to create, execute, pause, resume, and destroy isolated Linux sandboxes. It also handles files, execution limits, operation status, and resource cleanup. Clients do not need to use Hudson or Temporal to call these APIs.
+Hudsonbox provides APIs to create, execute, pause, resume, and destroy isolated Linux sandboxes. It also handles files, execution limits, operation status, and resource cleanup. Clients do not need to use Hudson or Temporal to call these APIs.
 
 | Component | Responsibility |
 | --- | --- |
 | Hudson harness, in the `hudson` repository | Agent behavior, business permissions, approvals, budgets, credentials, and any durable tasks implemented with Temporal |
-| Hudson Sandbox, in this repository | Authenticated sandbox APIs, operation records, placement, lifecycle controllers, snapshots, execution limits, and cleanup |
+| Hudsonbox, in this repository | Authenticated sandbox APIs, operation records, placement, lifecycle controllers, snapshots, execution limits, and cleanup |
 | Kubernetes | Deployment and scheduling of platform services; resource controls for the workloads it manages |
 | Firecracker and the host supervisor | Individual microVMs, their host resources, and isolated execution |
 
@@ -21,7 +21,7 @@ Hudson Sandbox provides APIs to create, execute, pause, resume, and destroy isol
 
 Hudson may wrap sandbox API calls in Temporal Activities in its own repository. Those calls use the same operation IDs, status APIs, and cancellation contracts as any other client. A sandbox does not receive Temporal credentials or understand workflow history.
 
-The parent context is Hudson's [product goals](https://github.com/hudson-infinity/hudson/blob/main/docs/goals.md) and [Rust decision](https://github.com/hudson-infinity/hudson/blob/main/docs/implementation-decisions/0001-rust.md). Those repositories are context, not dependencies for operating a self-hosted sandbox service.
+The parent context is Hudson's [product goals](https://github.com/hudson-frontier/hudson/blob/main/docs/goals.md) and [Rust decision](https://github.com/hudson-frontier/hudson/blob/main/docs/implementation-decisions/0001-rust.md). Those repositories are context, not dependencies for operating a self-hosted sandbox service.
 
 ## Client interfaces and agent integration
 
@@ -46,7 +46,7 @@ All clients share server-side permission, quota, and lifecycle enforcement. Back
 
 For a custom harness such as Hudson, implement a harness tool that calls the API directly or through an SDK. The harness holds the project credential and returns concise operation results to its agent. No Hudson-specific identity service or Temporal dependency is added here.
 
-For an agent with shell access, the integration is **agent shell tool → `hudson-sandbox` CLI → API**. Claude Code is one example: it can run commands and consume project instructions, as described in its [official overview](https://code.claude.com/docs/en/overview). Our planned integration installs the CLI in the agent's execution environment, configures the service URL and project credential, and provides short instructions for using it. The API and sandbox compute may be remote from that CLI.
+For an agent with shell access, the integration is **agent shell tool → `hudsonbox` CLI → API**. Claude Code is one example: it can run commands and consume project instructions, as described in its [official overview](https://code.claude.com/docs/en/overview). Our planned integration installs the CLI in the agent's execution environment, configures the service URL and project credential, and provides short instructions for using it. The API and sandbox compute may be remote from that CLI.
 
 Installing the CLI does not redirect the harness's built-in file edits or shell commands into our sandbox. The agent must explicitly use the CLI for remote execution and file transfers. Instructions help it choose the tool; they do not enforce isolation of other harness tools. A caller that needs all execution confined to our sandbox must enforce that through its harness configuration. A chat client with no custom-tool or shell integration cannot use the service merely because an HTTP endpoint exists.
 

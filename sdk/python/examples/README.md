@@ -8,8 +8,8 @@ operator-provisioned authenticated instance. Installation and hardware qualifica
 For create/upload/execute/cancel/destroy recovery, use [recover_operation.py](recover_operation.py) and the [versioned workflow contract](../../../docs/durable-workflow.md). Each caller-owned step retains its original key/payload and assigned handles; output/files and readiness use the existing SDK.
 
 [recover_execute.py](recover_execute.py) demonstrates a narrow client recovery
-contract for [sandbox #112](https://github.com/hudson-infinity/hudson-sandbox/issues/112)
-and [Hudson #17](https://github.com/hudson-infinity/hudson/issues/17). It uses the
+contract for [sandbox #112](https://github.com/hudson-frontier/hudsonbox/issues/112)
+and [Hudson #17](https://github.com/hudson-frontier/hudson/issues/17). It uses the
 ordinary versioned HTTPS SDK. It is a source example, not a harness, workflow
 engine, installer or complete workload quickstart. It needs an already-created
 sandbox and a trusted private client configuration from the [client guide](../../../docs/language-clients.md).

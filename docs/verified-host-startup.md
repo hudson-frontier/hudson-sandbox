@@ -1,6 +1,6 @@
 # Start the host with verified guest images
 
-The [verified launcher](../scripts/launch_verified_host.py) runs the existing full image verifier before starting the existing Linux `sandbox-host`. It connects the [pinned image recipe](../dev/guest-image/README.md) to an operator startup path for [#108](https://github.com/hudson-infinity/hudson-sandbox/issues/108). A missing/tampered manifest, wrong architecture, missing embedded init/agent, mismatched configured image or understated capability disk floor prevents host startup.
+The [verified launcher](../scripts/launch_verified_host.py) runs the existing full image verifier before starting the existing Linux `sandbox-host`. It connects the [pinned image recipe](../dev/guest-image/README.md) to an operator startup path for [#108](https://github.com/hudson-frontier/hudsonbox/issues/108). A missing/tampered manifest, wrong architecture, missing embedded init/agent, mismatched configured image or understated capability disk floor prevents host startup.
 
 This validates image integrity and configuration handoff. It does not establish guest readiness, hardware isolation, network enforcement or pause/resume. Native aarch64 build and authenticated real-workload/physical-cleanup acceptance remain pending. The original host binary is still available for explicitly unqualified development; use this verified path for the pinned workload images.
 

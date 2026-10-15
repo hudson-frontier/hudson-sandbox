@@ -6,7 +6,7 @@ import dataclasses
 import json
 import re
 import sys
-from hudson_sandbox import Client, ClientError, RangeChunk, EventStream
+from hudsonbox import Client, ClientError, RangeChunk, EventStream
 
 
 def normalize(value):

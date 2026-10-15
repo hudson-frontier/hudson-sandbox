@@ -302,7 +302,7 @@ def outputs(doc):
     ts_models, ts_requests = render_typescript(doc, ps)
     codes = doc["components"]["schemas"]["ProblemBody"]["properties"]["code"]["enum"]
     metadata = {"models": ps, "codes": codes, "version": doc["info"]["version"]}
-    py = ROOT / "sdk/python/src/hudson_sandbox"
+    py = ROOT / "sdk/python/src/hudsonbox"
     ts = ROOT / "sdk/typescript/src"
     return {
         py / "models.py": py_models,

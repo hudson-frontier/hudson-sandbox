@@ -53,7 +53,7 @@ with tempfile.TemporaryDirectory(prefix="hudson-sdk-packages-") as directory:
         str(installed),
         str(wheel),
     )
-    smoke = 'import sys;sys.path.insert(0,sys.argv[1]);import hudson_sandbox as sdk;import importlib.metadata;assert sdk.__version__==sys.argv[2];assert importlib.metadata.version("hudson-sandbox-client")==sys.argv[2];assert sdk.models.CommandInput(argv=["true"],deadline_unix_ms=1).to_wire()["output_limit"]==1048576;assert sdk.__file__.startswith(sys.argv[1])'
+    smoke = 'import sys;sys.path.insert(0,sys.argv[1]);import hudsonbox as sdk;import importlib.metadata;assert sdk.__version__==sys.argv[2];assert importlib.metadata.version("hudsonbox-client")==sys.argv[2];assert sdk.models.CommandInput(argv=["true"],deadline_unix_ms=1).to_wire()["output_limit"]==1048576;assert sdk.__file__.startswith(sys.argv[1])'
     run(sys.executable, "-I", "-c", smoke, str(installed), version)
     run(
         "npm",
@@ -80,7 +80,7 @@ with tempfile.TemporaryDirectory(prefix="hudson-sdk-packages-") as directory:
     )
     sample = consumer / "smoke.mts"
     sample.write_text(
-        'import {Client, stringify, type CommandInput, type Input} from "@hudson-infinity/sandbox-client";\nconst input: Input<CommandInput> = { argv: ["true"], deadline_unix_ms: 9007199254740993n };\nif (!stringify(input).includes("9007199254740993") || typeof Client !== "function") throw new Error("package smoke failed");\n'
+        'import {Client, stringify, type CommandInput, type Input} from "@hudson-frontier/hudsonbox-client";\nconst input: Input<CommandInput> = { argv: ["true"], deadline_unix_ms: 9007199254740993n };\nif (!stringify(input).includes("9007199254740993") || typeof Client !== "function") throw new Error("package smoke failed");\n'
     )
     run(
         str(ROOT / "sdk/typescript/node_modules/.bin/tsc"),

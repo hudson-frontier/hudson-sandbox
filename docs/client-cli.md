@@ -1,17 +1,17 @@
 # Rust client and project CLI
 
-Status: the reusable [Rust client](../crates/sandbox-client/src/lib.rs) and `hudson-sandbox` CLI cover the 14 implemented Project API operations. They use HTTPS only and have no database, supervisor or Firecracker authority. [Python/TypeScript clients](language-clients.md) cover the same operations with shared conformance. Package publication, signed installers and supported-host release gates remain unfinished. This is a development client for an existing installation, not a production deployment quickstart.
+Status: the reusable [Rust client](../crates/sandbox-client/src/lib.rs) and `hudsonbox` CLI cover the 14 implemented Project API operations. They use HTTPS only and have no database, supervisor or Firecracker authority. [Python/TypeScript clients](language-clients.md) cover the same operations with shared conformance. Package publication, signed installers and supported-host release gates remain unfinished. This is a development client for an existing installation, not a production deployment quickstart.
 
 ## Build and configure
 
 From the repository, using the pinned Rust toolchain:
 
 ```sh
-cargo build --locked -p sandbox-cli --bin hudson-sandbox
-./target/debug/hudson-sandbox --help
+cargo build --locked -p sandbox-cli --bin hudsonbox
+./target/debug/hudsonbox --help
 ```
 
-The binary is named `hudson-sandbox`; its Cargo package remains `sandbox-cli`. Private-file loading currently supports Unix (tested on macOS and Linux); other platforms fail closed. Ordinary client builds do not need Python, PostgreSQL, protoc or VM access. Workspace/API integration tests need the [development dependencies](implementation/dev-env.md).
+The binary is named `hudsonbox`; its Cargo package remains `sandbox-cli`. Private-file loading currently supports Unix (tested on macOS and Linux); other platforms fail closed. Ordinary client builds do not need Python, PostgreSQL, protoc or VM access. Workspace/API integration tests need the [development dependencies](implementation/dev-env.md).
 
 An operator first provisions a project using [offline project provisioning](api-server.md#offline-project-provisioning). Retain the resulting JSON credential file unchanged. In a trusted directory owned by your user with mode `0700`, create a mode `0600` client configuration:
 
@@ -27,11 +27,11 @@ An operator first provisions a project using [offline project provisioning](api-
 
 `credential_file` and optional `ca_file` paths resolve relative to this configuration. Configuration, credential and explicit CA files must be private regular files owned by the effective user, at most 64 KiB. Symlinks, devices, FIFOs and group/other access are rejected. Protect the containing directories too; the client checks each opened file, not every parent directory. An explicit CA bundle replaces system roots. Omit `ca_file` to use normal platform trust. Hostname/certificate verification always applies.
 
-The endpoint must be an HTTPS origin without user information, query, fragment or a non-root path. Redirects, ambient proxy variables and automatic transport retries are disabled. There is no token flag or insecure TLS option. Set a trusted `HUDSON_SANDBOX_CONFIG` path, or pass `--config /absolute/path/client.json`. Agent integrations should fix this path in a trusted wrapper outside model tool arguments.
+The endpoint must be an HTTPS origin without user information, query, fragment or a non-root path. Redirects, ambient proxy variables and automatic transport retries are disabled. There is no token flag or insecure TLS option. Set a trusted `HUDSONBOX_CONFIG` path, or pass `--config /absolute/path/client.json`. Agent integrations should fix this path in a trusted wrapper outside model tool arguments.
 
 ```sh
-export HUDSON_SANDBOX_CONFIG=/absolute/private/path/client.json
-./target/debug/hudson-sandbox --json list --limit 20
+export HUDSONBOX_CONFIG=/absolute/private/path/client.json
+./target/debug/hudsonbox --json list --limit 20
 ```
 
 ## Stable mutations and operation handles
@@ -39,8 +39,8 @@ export HUDSON_SANDBOX_CONFIG=/absolute/private/path/client.json
 Every create, execute, destroy, cancel and upload requires either `--key` or `--key-file`. Generate one key **before** the first attempt and retain it with the exact request. The `key` command generates a random UUIDv4, writes a private file and refuses to overwrite an existing path. It does not call the API.
 
 ```sh
-hudson-sandbox key --to create.key
-hudson-sandbox --json create --request create.json --key-file create.key
+hudsonbox key --to create.key
+hudsonbox --json create --request create.json --key-file create.key
 ```
 
 Example `create.json` (replace the digest with an image allowlisted by your operator):
@@ -55,8 +55,8 @@ Example `create.json` (replace the digest with an image allowlisted by your oper
 Admission returns the original sandbox/operation handles and current status. It does not wait for readiness. Poll that operation explicitly:
 
 ```sh
-hudson-sandbox --json wait op_REPLACE_WITH_RETURNED_ID --seconds 60
-hudson-sandbox --json get sbx_REPLACE_WITH_RETURNED_ID
+hudsonbox --json wait op_REPLACE_WITH_RETURNED_ID --seconds 60
+hudsonbox --json get sbx_REPLACE_WITH_RETURNED_ID
 ```
 
 Execute uses a saved JSON request too, so a retry preserves the absolute command deadline and argument/environment values. Create this file once; do not regenerate its deadline during a retry. The API requires a future deadline within its admission window for a new command. Exact duplicate retries follow the [admission contract](api-contract.md#retries-and-admission).
@@ -69,8 +69,8 @@ with open('execute.json', 'x') as request:
                'deadline_unix_ms': int(time.time() * 1000) + 60000,
                'output_limit': 1048576}, request)
 PY
-hudson-sandbox key --to execute.key
-hudson-sandbox --json execute sbx_REPLACE_WITH_RETURNED_ID \
+hudsonbox key --to execute.key
+hudsonbox --json execute sbx_REPLACE_WITH_RETURNED_ID \
   --request execute.json --key-file execute.key
 ```
 

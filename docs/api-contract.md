@@ -23,7 +23,7 @@ The first release ships the CLI and three SDKs — Python, TypeScript, and Rust.
 For example, this is a proposed mapping, not a working command:
 
 ```text
-hudson-sandbox pause <sandbox-id>
+hudsonbox pause <sandbox-id>
     → POST /v1/sandboxes/{sandbox_id}/pause
     → Authorization: Bearer <configured-project-token>
     → Idempotency-Key: <key-for-this-logical-request>
@@ -191,7 +191,7 @@ Admission permits one active file write per sandbox. Retained source reservation
 
 ## Implemented file downloads
 
-The authenticated route `/v1/sandboxes/{sandbox_id}/files/captures` exposes short-lived captured reads from the current running allocation. Configure the API's separate [file-reader connection](api-server.md#file-reader-configuration) first. Uploads use the separate [durable operation route](#implemented-file-uploads). The [source cleanup worker](file-transfer.md#source-cleanup-worker) handles expired upload bytes; history reclamation remains tracked by [issue #62](https://github.com/hudson-infinity/hudson-sandbox/issues/62).
+The authenticated route `/v1/sandboxes/{sandbox_id}/files/captures` exposes short-lived captured reads from the current running allocation. Configure the API's separate [file-reader connection](api-server.md#file-reader-configuration) first. Uploads use the separate [durable operation route](#implemented-file-uploads). The [source cleanup worker](file-transfer.md#source-cleanup-worker) handles expired upload bytes; history reclamation remains tracked by [issue #62](https://github.com/hudson-frontier/hudsonbox/issues/62).
 
 | Method | Request | Successful response |
 | --- | --- | --- |
