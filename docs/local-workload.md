@@ -76,7 +76,7 @@ Simulated readiness is refused by default before upload/execute. For protocol-on
 
 Retain the entire private directory. Create/upload/execute/destroy have immutable fsynced requests, stable mutation keys and saved operation handles. Restart with the same profile/image/options: saved handles use GET; an admission with a lost response gets at most one explicit retry with the unchanged key/body. Execute deadlines are chosen once. Credential/origin/CA changes fail closed; coordinate identity recovery instead of editing a saved request.
 
-Unknown/pending/failed/expired operations, output gaps, readiness loss and integrity failures stop the example. They never rotate keys or automatically cancel/destroy. Capture has no mutation key: its attempt is persisted before POST and its opaque handle privately after the response. A lost capture response refuses automatic recapture; explicitly destroy the known sandbox:
+Unknown/pending/failed operations, expired create/upload/execute results, output gaps, readiness loss and integrity failures stop the example. They never rotate keys or automatically cancel/destroy. A successful destroy can finish cleanup from its retained terminal status even after its result body expires; recovery never repeats upload, execute or capture. Capture has no mutation key: its attempt is persisted before POST and its opaque handle privately after the response. A lost capture response refuses automatic recapture; explicitly destroy the known sandbox:
 
 ```sh
 "$hudson_local_dir/python/bin/python" sdk/python/examples/local_workload.py \
