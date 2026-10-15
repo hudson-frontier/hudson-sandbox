@@ -50,6 +50,8 @@ async fn authenticated_generation_guard_rejects_stale_new_work_but_preserves_exa
 ) {
     let f = Fixture::new(&pool).await;
     f.finish().await;
+    let other = Fixture::new(&pool).await;
+    other.finish().await;
     let app = f.app(None);
     let stale = send(
         &app,
@@ -104,7 +106,6 @@ async fn authenticated_generation_guard_rejects_stale_new_work_but_preserves_exa
     .await;
     assert_eq!(conflict.0, StatusCode::CONFLICT);
     assert_eq!(conflict.1["code"], "conflict");
-    let other = Fixture::new(&pool).await;
     let foreign = send(
         &other.app(None),
         &other.token,
