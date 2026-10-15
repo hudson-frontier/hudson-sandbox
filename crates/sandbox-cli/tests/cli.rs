@@ -61,6 +61,57 @@ async fn canonical(pool: &PgPool, f: &Fixture, digest: &str) {
     .unwrap();
 }
 #[sqlx::test(migrator = "sandbox_store::MIGRATOR")]
+async fn cli_forwards_generation_preconditions_and_keeps_guarded_retry_identity(pool: PgPool) {
+    let f = Fixture::new(&pool).await;
+    f.finish().await;
+    let server = Server::start(f.app(None)).await;
+    credential(&server, &f);
+    let sandbox = f.sandbox.to_string();
+    let request = server.directory.path().join("guarded-execute.json");
+    let now = (time::OffsetDateTime::now_utc().unix_timestamp_nanos() / 1_000_000) as i64;
+    let mut body = json!({"argv":["true"],"deadline_unix_ms":now+60000,"expected_generation":2});
+    private(&request, &serde_json::to_vec(&body).unwrap());
+    cli(
+        &server,
+        &[
+            "execute",
+            &sandbox,
+            "--request",
+            path(&request),
+            "--key",
+            "cli-stale-generation-01",
+        ],
+        8,
+    )
+    .await;
+    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM operations WHERE project_id=$1")
+        .bind(f.project.uuid())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(count, 1);
+    body["expected_generation"] = json!(1);
+    private(&request, &serde_json::to_vec(&body).unwrap());
+    let args = [
+        "execute",
+        &sandbox,
+        "--request",
+        path(&request),
+        "--key",
+        "cli-matching-generation-01",
+    ];
+    let accepted = value(&server, &args).await;
+    assert_eq!(accepted, value(&server, &args).await);
+    let payload: Value =
+        sqlx::query_scalar("SELECT payload FROM operations WHERE idempotency_key=$1")
+            .bind("cli-matching-generation-01")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(payload["expected_generation"], 1);
+}
+
+#[sqlx::test(migrator = "sandbox_store::MIGRATOR")]
 async fn cli_all_routes_preserve_keys_handles_cursors_and_binary_files(pool: PgPool) {
     let f = Fixture::new(&pool).await;
     f.publish().await;

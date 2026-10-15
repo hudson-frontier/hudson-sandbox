@@ -159,6 +159,12 @@ New execute admission reserves one of 32 command slots and its full `output_limi
 
 Reservations conservatively include every admitted command, including commands that never started. Completion, response expiry, object-storage cleanup and payload compaction do not release host/guest journal reservations. Work accepted by an older version that already exceeds these bounds fails before its first dispatch with `execution_capacity_exhausted` and `dispatch_intent_absent=true`. Previously dispatched or unknown work still reconciles. The opt-in [history worker](history-reclamation.md#operator-activation) refunds only an acknowledged contiguous prefix after all external consumers retire. The limits remain development defaults. Out-of-band host RPCs or inconsistent database/host history can still exhaust host capacity after intent and leave an outcome unknown. See [command ownership](controller.md#command-admission-and-dispatch-ownership) for recovery details.
 
+### Execution generation precondition
+
+An execute request may include `expected_generation`, the positive generation returned by an authorized sandbox read. New admission compares it while holding the sandbox row lock. A mismatch returns `409 sandbox_generation_mismatch` without an operation ID or retry-key consumption. Explicit null, nonpositive values and invalid types are rejected. Omitting the field preserves existing admission behavior.
+
+Persist this field with the command's original key, payload and deadline. Changing or removing it after admission conflicts with that key. An exact retry still resolves to its original operation, including after the sandbox generation changes or its response expires; it cannot target a replacement allocation. Queued work also retains the existing dispatch generation fence. Continue polling the admitted operation for execution and cleanup outcomes.
+
 ## Output, files, and reconnects
 
 Live output follows guest → supervisor → authorized streaming endpoint → client. Use operation/output sequence cursors, bounded buffers, and backpressure. A reconnect requests the same operation's retained history; signal an explicit gap when history expired. Neither disconnect nor gap causes cancellation or re-execution. For planned pause/resume, pause ends the stream and resume needs an explicit history transition under the original operation ID. Current stream cursors bind one producing allocation/boot; cross-allocation history transitions are not implemented.

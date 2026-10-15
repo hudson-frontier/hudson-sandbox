@@ -140,6 +140,17 @@ export const schema: Schema = {
           "nullable": false,
           "omit_false": false,
           "default": 1048576
+        },
+        "expected_generation": {
+          "type": {
+            "kind": "integer",
+            "wide": true,
+            "min": "-9223372036854775808",
+            "max": "9223372036854775807"
+          },
+          "required": false,
+          "nullable": false,
+          "omit_false": false
         }
       },
       "closed": true
@@ -798,6 +809,7 @@ export const schema: Schema = {
     "file_range_invalid",
     "command_in_progress",
     "execution_capacity_exhausted",
+    "sandbox_generation_mismatch",
     "conflict",
     "unavailable",
     "internal"

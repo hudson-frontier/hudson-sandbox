@@ -24,6 +24,7 @@ class CommandInput(Model):
     cwd: str = '/'
     deadline_unix_ms: int
     output_limit: int = 1048576
+    expected_generation: int | None = None
 
 @dataclass(kw_only=True, repr=False)
 class DestroyRequest(Model):

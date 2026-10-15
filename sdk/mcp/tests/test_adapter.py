@@ -240,6 +240,39 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.requests), 1)
         self.assertEqual(self.requests[0].headers["idempotency-key"], KEY)
 
+    async def test_execute_preserves_generation_preconditions_and_rejects_bad_values(
+        self,
+    ):
+        arguments = {
+            "sandbox_id": SB,
+            "idempotency_key": KEY,
+            "body": {**COMMAND, "expected_generation": 2},
+        }
+        self.assertFalse((await self.call("execute", arguments)).is_error)
+        self.assertEqual(json.loads(self.requests[0].content)["expected_generation"], 2)
+        for generation in (None, 0, -1, True, 1.5, "1", 2**53):
+            rejected = await self.call(
+                "execute",
+                {**arguments, "body": {**COMMAND, "expected_generation": generation}},
+            )
+            self.assertTrue(rejected.is_error)
+        self.assertEqual(len(self.requests), 1)
+        self.handler = lambda request: httpx.Response(
+            409,
+            json={
+                "status": 409,
+                "code": "sandbox_generation_mismatch",
+                "title": SECRET,
+            },
+        )
+        rejected = await self.call("execute", arguments)
+        self.assertTrue(rejected.is_error)
+        self.assertEqual(
+            rejected.structured_content["error"]["code"], "sandbox_generation_mismatch"
+        )
+        self.assertNotIn(SECRET, rejected.content[0].text)
+        self.assertEqual(len(self.requests), 2)
+
     async def test_admission_keeps_handle_and_same_request_identity(self):
         a = {"sandbox_id": SB, "idempotency_key": KEY, "body": COMMAND}
         first = await self.call("execute", a)

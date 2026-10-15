@@ -133,6 +133,7 @@ TOOLS = {
                         "cwd": text(4096, pattern=r"^/"),
                         "deadline_unix_ms": number(1, 2**53 - 1),
                         "output_limit": number(1, 10485760),
+                        "expected_generation": number(1, 2**53 - 1),
                     },
                     ("argv", "deadline_unix_ms"),
                 ),

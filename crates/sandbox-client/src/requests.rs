@@ -20,6 +20,7 @@ pub(crate) fn known_problem_code(code: &str) -> Option<&'static str> {
         "file_range_invalid" => Some("file_range_invalid"),
         "command_in_progress" => Some("command_in_progress"),
         "execution_capacity_exhausted" => Some("execution_capacity_exhausted"),
+        "sandbox_generation_mismatch" => Some("sandbox_generation_mismatch"),
         "conflict" => Some("conflict"),
         "unavailable" => Some("unavailable"),
         "internal" => Some("internal"),

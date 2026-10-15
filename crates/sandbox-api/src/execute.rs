@@ -59,6 +59,7 @@ pub async fn execute(
             "sandbox is not running with a current execution lease",
         )),
         ExecuteAdmission::CapacityExhausted => Err(Problem::ExecutionCapacityExhausted),
+        ExecuteAdmission::GenerationMismatch => Err(Problem::SandboxGenerationMismatch),
         ExecuteAdmission::Busy(id) => Err(Problem::CommandInProgress(id)),
     }
 }

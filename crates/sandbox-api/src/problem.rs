@@ -40,6 +40,7 @@ pub enum Problem {
     FileRange,
     CommandInProgress(sandbox_protocol::OperationId),
     ExecutionCapacityExhausted,
+    SandboxGenerationMismatch,
     /// The same key was used for a different request, or a conflicting
     /// lifecycle transition is already in progress.
     Conflict(&'static str),
@@ -79,6 +80,7 @@ impl Problem {
             Self::OutputRange => StatusCode::RANGE_NOT_SATISFIABLE,
             Self::CommandInProgress(_) => StatusCode::CONFLICT,
             Self::ExecutionCapacityExhausted => StatusCode::CONFLICT,
+            Self::SandboxGenerationMismatch => StatusCode::CONFLICT,
             Self::Conflict(_) | Self::TransitionInProgress(_) => StatusCode::CONFLICT,
             Self::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
             Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
@@ -107,6 +109,7 @@ impl Problem {
             Self::FileRange => "file_range_invalid",
             Self::CommandInProgress(_) => "command_in_progress",
             Self::ExecutionCapacityExhausted => "execution_capacity_exhausted",
+            Self::SandboxGenerationMismatch => "sandbox_generation_mismatch",
             Self::Conflict(_) | Self::TransitionInProgress(_) => "conflict",
             Self::Unavailable => "unavailable",
             Self::Internal => "internal",
@@ -137,6 +140,7 @@ impl Problem {
             Self::ExecutionCapacityExhausted => {
                 "Retained command capacity is exhausted; use a smaller output limit or a new sandbox"
             }
+            Self::SandboxGenerationMismatch => "Sandbox generation does not match the request",
             Self::Conflict(detail) => detail,
             Self::TransitionInProgress(_) => "Another lifecycle operation is in progress",
             Self::Unavailable => "The service is temporarily unable to handle this request",

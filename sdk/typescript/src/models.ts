@@ -19,6 +19,7 @@ export interface CommandInput {
   cwd?: string;
   deadline_unix_ms: bigint;
   output_limit?: bigint;
+  expected_generation?: bigint;
 }
 export interface DestroyRequest {
   correlation_id?: string | null;

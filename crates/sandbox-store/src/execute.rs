@@ -39,6 +39,7 @@ pub enum ExecuteAdmission {
     InvalidCommand,
     InvalidDeadline,
     NotRunning,
+    GenerationMismatch,
     CapacityExhausted,
     Busy(OperationId),
 }
@@ -156,6 +157,13 @@ impl Store {
         };
         if sandbox.try_get::<String, _>("desired_state")? == "destroyed" {
             return Ok(ExecuteAdmission::Gone);
+        }
+        let generation: i64 = sandbox.try_get("generation")?;
+        if r.command
+            .expected_generation
+            .is_some_and(|expected| expected != generation)
+        {
+            return Ok(ExecuteAdmission::GenerationMismatch);
         }
         if let Some(id) =
             sandbox.try_get::<Option<uuid::Uuid>, _>("active_transition_operation_id")?
@@ -318,7 +326,10 @@ impl Store {
                 AND (t->>'expires_at' IS NULL OR (t->>'expires_at')::timestamptz>clock_timestamp()))
             FROM operations o JOIN projects p ON p.id=o.project_id JOIN sandboxes s ON s.id=o.sandbox_id WHERE o.id=$1")
             .bind(claim.operation_id.uuid()).fetch_one(&mut *tx).await?;
-        let current = sandbox.try_get::<String, _>("desired_state")? == "running"
+        let current = command
+            .expected_generation
+            .is_none_or(|expected| expected == owner.generation)
+            && sandbox.try_get::<String, _>("desired_state")? == "running"
             && sandbox.try_get::<String, _>("observed_state")? == "running"
             && sandbox
                 .try_get::<Option<uuid::Uuid>, _>("active_transition_operation_id")?
