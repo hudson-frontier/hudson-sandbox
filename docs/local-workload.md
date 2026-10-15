@@ -90,7 +90,7 @@ Teardown never submits create to discover unknown admission. If no create handle
   --config "$hudson_local_dir/client.json" --state "$hudson_local_dir/workload-state/create" submit
 ```
 
-Then request teardown. This keeps the same create key/request. An expired response without a sandbox handle needs operator inspection. Once destroy is prepared, restart completes cleanup without repeating upload, execute or capture. Finished directories return a validated local report marked `saved_report: true`, not new server authorization or current health evidence.
+Then request teardown. This keeps the same create key/request. If submission returns `410 response_expired` with an operation ID, run the same recovery command with `poll` instead of `submit`. Its authenticated GET saves the sandbox identity in a separate immutable receipt, allowing teardown even after the original create response expires. If no operation handle is available or its GET is denied/unavailable, retain the state for operator inspection. Once destroy is prepared, restart completes cleanup without repeating upload, execute or capture. Finished directories return a validated local report marked `saved_report: true`, not new server authorization or current health evidence.
 
 ## Verify release; retain local data
 

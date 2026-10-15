@@ -232,6 +232,7 @@ class WorkflowTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ClientError):
             await self.call(directory)
         self.assertTrue((directory / "receipt.json").exists())
+        original = (directory / "receipt.json").read_bytes()
         self.handler = lambda request: reply(
             200, operation("create", response_expired=True)
         )
@@ -239,6 +240,36 @@ class WorkflowTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.requests[-1].method, "GET")
         self.assertEqual(report["outcome"], "response_expired")
         self.assertEqual(report["sandbox_id"], SB)
+        with example.Journal(directory) as journal:
+            _, digest = example.load(journal, self.binding)
+            self.assertEqual(example.receipt(journal, digest)["sandbox_id"], SB)
+        await self.call(directory, "poll")
+        self.assertEqual((directory / "receipt.json").read_bytes(), original)
+        self.assertEqual([r.method for r in self.requests], ["POST", "GET", "GET"])
+
+    async def test_expired_handle_rejects_wrong_kind_and_mismatched_resolved_identity(
+        self,
+    ):
+        directory = self.prepare("create")
+        with example.Journal(directory) as journal:
+            _, digest = example.load(journal, self.binding)
+            example.save_receipt(journal, digest, OP, None)
+        self.handler = lambda request: reply(200, operation("execute"))
+        with self.assertRaises(example.state.StateError):
+            await self.call(directory, "poll")
+        self.assertFalse((directory / "resolved-receipt.json").exists())
+        with example.Journal(directory) as journal:
+            original = example.receipt(journal, digest)
+            journal.write_new(
+                "resolved-receipt.json",
+                example.state.encode(
+                    {**original, "operation_id": OTHER_OP, "sandbox_id": SB}
+                ),
+            )
+        count = len(self.requests)
+        with self.assertRaises(example.state.StateError):
+            await self.call(directory, "poll")
+        self.assertEqual(len(self.requests), count)
 
     async def test_wait_timeout_and_disconnect_never_cancel_or_destroy(self):
         directory = self.prepare("execute")

@@ -125,9 +125,9 @@ def load(journal, binding):
     return value, hashlib.sha256(raw).hexdigest()
 
 
-def receipt(journal, digest):
+def read_receipt(journal, digest, name):
     try:
-        value = state.decode(journal.read("receipt.json"))
+        value = state.decode(journal.read(name))
     except FileNotFoundError:
         return None
     if (
@@ -141,6 +141,26 @@ def receipt(journal, digest):
     if value["sandbox_id"] is not None:
         identifier(value["sandbox_id"], "sbx_")
     return value
+
+
+def receipt(journal, digest):
+    original = read_receipt(journal, digest, "receipt.json")
+    if original is None:
+        return None
+    resolved = read_receipt(journal, digest, "resolved-receipt.json")
+    if resolved is None:
+        return original
+    if (
+        resolved["operation_id"] != original["operation_id"]
+        or resolved["sandbox_id"] is None
+        or original["sandbox_id"] not in (None, resolved["sandbox_id"])
+    ):
+        state.invalid()
+    # Publication may have been visible before a previous directory sync failed.
+    # Confirm this recovered identity before another step uses it for teardown.
+    state.private_read("resolved-receipt.json", journal.fd, sync=True)
+    os.fsync(journal.fd)
+    return resolved
 
 
 def save_receipt(journal, digest, operation_id, sandbox_id):
@@ -306,6 +326,14 @@ async def recover(client, journal, binding, action, seconds=10):
         and operation.target_operation_id != saved["request"]["operation_id"]
     ):
         state.invalid()
+    if handle["sandbox_id"] is None:
+        # A 410 admission reply retains the operation ID but lacks the create
+        # sandbox ID. Bind its authenticated GET result without rewriting the
+        # original receipt, request or mutation key. Validate kind/target first.
+        journal.write_new(
+            "resolved-receipt.json",
+            state.encode({**handle, "sandbox_id": operation.sandbox_id}),
+        )
     report = {
         "logical_run_id": saved["logical_run_id"],
         "kind": operation.kind,
