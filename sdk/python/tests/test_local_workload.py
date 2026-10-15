@@ -296,6 +296,42 @@ class WorkloadTests(unittest.IsolatedAsyncioTestCase):
             await self.call(teardown=True)
         self.assertEqual(len(self.calls), count)
 
+    async def test_expired_create_recovery_persists_identity_for_explicit_teardown(
+        self,
+    ):
+        original_route = self.route
+
+        def expired(request):
+            if request.method == "POST" and request.url.path == "/v1/sandboxes":
+                return reply(
+                    410,
+                    {
+                        "title": "Response expired",
+                        "status": 410,
+                        "code": "response_expired",
+                        "operation_id": OPS["create"],
+                    },
+                )
+            return original_route(request)
+
+        await self.client._http.aclose()
+        self.client._http = httpx.AsyncClient(transport=httpx.MockTransport(expired))
+        with self.assertRaises(ClientError):
+            await self.call()
+        directory = self.directory / "create"
+        original_receipt = (directory / "receipt.json").read_bytes()
+        with example.steps.Journal(directory) as journal:
+            recovered = await example.steps.recover(
+                self.client, journal, "fixture-binding", "poll"
+            )
+        self.assertEqual(recovered["sandbox_id"], SB)
+        report = await self.call(teardown=True)
+        self.assertTrue(report["teardown_only"])
+        self.assertTrue(self.destroyed)
+        self.assertEqual((directory / "receipt.json").read_bytes(), original_receipt)
+        self.assertFalse(any(call[0] == "PUT" for call in self.calls))
+        self.assertFalse(self.posts("/execute"))
+
     async def test_root_directory_sync_failure_prevents_admission(self):
         with patch.object(
             example.os, "fsync", side_effect=OSError("private sync failure")
