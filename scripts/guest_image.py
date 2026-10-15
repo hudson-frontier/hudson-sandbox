@@ -409,7 +409,7 @@ def assemble(arch, revision, rootfs, output):
     # Fresh installations receive no reusable machine identity or credential state.
     for name, data in {
         "machine-id": b"",
-        "hostname": b"hudson-sandbox\n",
+        "hostname": b"hudsonbox\n",
         "hosts": b"127.0.0.1 localhost\n",
         "resolv.conf": b"",
     }.items():

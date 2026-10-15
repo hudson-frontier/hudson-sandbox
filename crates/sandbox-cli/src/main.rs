@@ -10,13 +10,13 @@ use std::{
 
 #[derive(Parser)]
 #[command(
-    name = "hudson-sandbox",
+    name = "hudsonbox",
     version,
-    about = "Project-scoped Hudson Sandbox HTTPS client"
+    about = "Project-scoped Hudsonbox HTTPS client"
 )]
 struct Cli {
     /// Private client configuration; contains the origin and credential file path.
-    #[arg(long, global = true, env = "HUDSON_SANDBOX_CONFIG")]
+    #[arg(long, global = true, env = "HUDSONBOX_CONFIG")]
     config: Option<PathBuf>,
     /// Machine-readable JSON. Stream always emits newline-delimited JSON events.
     #[arg(long, global = true)]
@@ -213,7 +213,7 @@ fn admitted(value: &AdmittedResponse, json: bool) -> Result<(), Error> {
     emit(
         value,
         &format!(
-            "Admitted {} for {} ({})\nPoll with: hudson-sandbox wait {}",
+            "Admitted {} for {} ({})\nPoll with: hudsonbox wait {}",
             escaped(&value.operation_id),
             escaped(&value.sandbox_id),
             escaped(&value.status),

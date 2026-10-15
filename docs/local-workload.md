@@ -1,6 +1,6 @@
 # Authenticated local development workload
 
-This development example implements the finite client flow in [#111](https://github.com/hudson-infinity/hudson-sandbox/issues/111): create, observed readiness, binary upload, guest execution, bounded output/SSE, verified download and explicit destruction. It uses the authenticated Python SDK and durable recovery steps. An operator installer, independent operator reproduction and real microVM teardown/isolation acceptance remain pending. Running the example does not qualify a host or promise saved memory.
+This development example implements the finite client flow in [#111](https://github.com/hudson-frontier/hudsonbox/issues/111): create, observed readiness, binary upload, guest execution, bounded output/SSE, verified download and explicit destruction. It uses the authenticated Python SDK and durable recovery steps. An operator installer, independent operator reproduction and real microVM teardown/isolation acceptance remain pending. Running the example does not qualify a host or promise saved memory.
 
 ## Isolate the local instance
 

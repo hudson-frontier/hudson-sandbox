@@ -1,8 +1,8 @@
 {
-  "name": "@hudson-infinity/sandbox-client",
+  "name": "@hudson-frontier/hudsonbox-client",
   "version": "0.0.0",
   "private": true,
-  "description": "Project-scoped HTTPS client for Hudson Sandbox",
+  "description": "Project-scoped HTTPS client for Hudsonbox",
   "license": "Apache-2.0",
   "type": "module",
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },

@@ -5,7 +5,7 @@ import asyncio
 import logging
 import sys
 
-from hudson_sandbox import Client
+from hudsonbox import Client
 
 from .adapter import Adapter, server
 from .stdio import run

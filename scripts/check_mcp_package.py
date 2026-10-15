@@ -47,7 +47,7 @@ with tempfile.TemporaryDirectory(prefix="hudson-mcp-package-") as directory:
     run(
         sys.executable,
         "-c",
-        "import hudson_sandbox_mcp,sys; assert hudson_sandbox_mcp.__file__.startswith(sys.argv[1])",
+        "import hudsonbox_mcp,sys; assert hudsonbox_mcp.__file__.startswith(sys.argv[1])",
         str(installed),
         cwd=stage,
         env=env,

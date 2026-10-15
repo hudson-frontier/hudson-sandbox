@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 
 import httpx
-from hudson_sandbox import Client, ClientError
+from hudsonbox import Client, ClientError
 
 SPEC = importlib.util.spec_from_file_location(
     "recover_execute", Path(__file__).parents[1] / "examples" / "recover_execute.py"

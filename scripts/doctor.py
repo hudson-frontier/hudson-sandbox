@@ -152,7 +152,7 @@ def main(argv=None):
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
     else:
-        print("Hudson Sandbox prerequisites: " + report["profile"])
+        print("Hudsonbox prerequisites: " + report["profile"])
         for item in report["checks"]:
             print(item["status"] + "  " + item["name"] + ": " + item["detail"])
             if item["status"] in ("failed", "missing") and item["action"]:

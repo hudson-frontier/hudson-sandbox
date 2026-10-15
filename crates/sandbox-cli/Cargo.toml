@@ -12,7 +12,7 @@ publish.workspace = true
 workspace = true
 
 [[bin]]
-name = "hudson-sandbox"
+name = "hudsonbox"
 path = "src/main.rs"
 
 [dependencies]

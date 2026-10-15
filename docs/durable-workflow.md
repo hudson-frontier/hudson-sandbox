@@ -1,6 +1,6 @@
 # Durable HTTP workflow integration
 
-The [version 1 workflow fixture](../api/conformance/workflow.json) and [step recovery example](../sdk/python/examples/recover_operation.py) cover a caller that persists a logical run and reconnects through the authenticated SDK. They implement the sandbox-side contract in [#112](https://github.com/hudson-infinity/hudson-sandbox/issues/112), coordinated with [Hudson #17](https://github.com/hudson-infinity/hudson/issues/17). Consumers can reference this fixture and the [shared three-client wire corpus](../api/conformance/clients.json); harness code remains in its own repository.
+The [version 1 workflow fixture](../api/conformance/workflow.json) and [step recovery example](../sdk/python/examples/recover_operation.py) cover a caller that persists a logical run and reconnects through the authenticated SDK. They implement the sandbox-side contract in [#112](https://github.com/hudson-frontier/hudsonbox/issues/112), coordinated with [Hudson #17](https://github.com/hudson-frontier/hudson/issues/17). Consumers can reference this fixture and the [shared three-client wire corpus](../api/conformance/clients.json); harness code remains in its own repository.
 
 ## Version and ownership
 

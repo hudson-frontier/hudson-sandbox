@@ -19,7 +19,7 @@ Contributors can now contribute, and self-hosters can run and modify the service
 
 Apache-2.0 carries an explicit patent grant, which MIT does not. For infrastructure software touching virtualization, that matters to the legal review a corporate adopter will run before deploying it.
 
-It permits a third party to operate Hudson Sandbox as a hosted service in competition with us. We accept that: adoption matters more than that risk at this stage, and the operational burden of running this well is itself a meaningful barrier.
+It permits a third party to operate Hudsonbox as a hosted service in competition with us. We accept that: adoption matters more than that risk at this stage, and the operational burden of running this well is itself a meaningful barrier.
 
 The choice is effectively one-way. Relicensing later needs the agreement of every contributor, so the time to have picked something more restrictive was before the first outside contribution.
 

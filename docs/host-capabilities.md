@@ -1,6 +1,6 @@
 # Local host capability enrollment
 
-The version 1 capability contract adds authenticated compatibility checks to the existing single-host controller. It is a slice of [#116](https://github.com/hudson-infinity/hudson-sandbox/issues/116): backup/restore rehearsal, supported-host qualification and a complete installation remain pending. It adds no provider integration, deployment, automatic epoch issuance or public registration route.
+The version 1 capability contract adds authenticated compatibility checks to the existing single-host controller. It is a slice of [#116](https://github.com/hudson-frontier/hudsonbox/issues/116): backup/restore rehearsal, supported-host qualification and a complete installation remain pending. It adds no provider integration, deployment, automatic epoch issuance or public registration route.
 
 ## Contract and evidence
 

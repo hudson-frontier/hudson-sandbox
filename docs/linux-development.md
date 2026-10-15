@@ -9,12 +9,12 @@ The [Lima configuration](../dev/lima-linux.yaml) requires Lima 2.2.0 or newer an
 ```sh
 brew install lima
 limactl validate dev/lima-linux.yaml
-limactl start --yes --name=hudson-sandbox-dev dev/lima-linux.yaml
-limactl copy scripts/check_linux_host.py hudson-sandbox-dev:/tmp/
-limactl shell --workdir=/tmp hudson-sandbox-dev sudo python3 /tmp/check_linux_host.py
+limactl start --yes --name=hudsonbox-dev dev/lima-linux.yaml
+limactl copy scripts/check_linux_host.py hudsonbox-dev:/tmp/
+limactl shell --workdir=/tmp hudsonbox-dev sudo python3 /tmp/check_linux_host.py
 ```
 
-Use a fresh instance name if `hudson-sandbox-dev` already belongs to other work. Do not overwrite an existing VM's configuration or disk to reproduce this setup. If the dated upstream image disappears, update its URL and digest in a reviewed change and validate the new image; do not remove checksum verification.
+Use a fresh instance name if `hudsonbox-dev` already belongs to other work. Do not overwrite an existing VM's configuration or disk to reproduce this setup. If the dated upstream image disappears, update its URL and digest in a reviewed change and validate the new image; do not remove checksum verification.
 
 Plain mode disables host filesystem mounts, automatic application-port forwarding and container tooling. SSH agent forwarding, host SSH public-key import, X11 forwarding and proxy-environment forwarding are explicitly disabled. SSH remains available for operator access. The Linux VM still has outbound network access for development dependencies; it is not a restricted customer sandbox. Copy only the needed source files or a tracked source archive into it, without credentials or local `.env` files.
 
@@ -25,8 +25,8 @@ The setup was also validated by compiling the shared protocol crate with Rust 1.
 The instance can be stopped without deleting its disk:
 
 ```sh
-limactl stop hudson-sandbox-dev
-limactl start --yes hudson-sandbox-dev
+limactl stop hudsonbox-dev
+limactl start --yes hudsonbox-dev
 ```
 
 ## Develop without mounting the host filesystem
@@ -34,17 +34,17 @@ limactl start --yes hudson-sandbox-dev
 The guest user has passwordless sudo for development. Install build dependencies there, then install the repository's pinned Rust toolchain using the [official Rust installation process](https://www.rust-lang.org/tools/install). Do not run customer workloads directly in this outer VM or treat its development privileges as a sandbox policy.
 
 ```sh
-limactl shell --workdir=/tmp hudson-sandbox-dev sudo apt-get update
-limactl shell --workdir=/tmp hudson-sandbox-dev sudo apt-get install -y \
+limactl shell --workdir=/tmp hudsonbox-dev sudo apt-get update
+limactl shell --workdir=/tmp hudsonbox-dev sudo apt-get install -y \
   build-essential pkg-config protobuf-compiler ca-certificates curl
 ```
 
 Transfer tracked source without `.env`, Git credentials, or the Mac build directory:
 
 ```sh
-git archive HEAD | limactl shell --workdir=/tmp hudson-sandbox-dev sh -c '
-  mkdir -p "$HOME/hudson-sandbox"
-  tar -xf - -C "$HOME/hudson-sandbox"
+git archive HEAD | limactl shell --workdir=/tmp hudsonbox-dev sh -c '
+  mkdir -p "$HOME/hudsonbox"
+  tar -xf - -C "$HOME/hudsonbox"
 '
 ```
 
@@ -56,7 +56,7 @@ Database claims, supervisor observations, TLS certificates and S3 signatures dep
 
 ```sh
 date -u
-limactl shell --workdir=/tmp hudson-sandbox-dev date -u
+limactl shell --workdir=/tmp hudsonbox-dev date -u
 ```
 
 During previous-epoch recovery validation, the development VM was about 65 minutes behind local MinIO. Health checks succeeded, but authenticated storage requests returned `RequestTimeTooSkewed`, which surfaced as an archival RPC failure. With test allocation cgroups confirmed empty, synchronizing the dedicated VM to the operator's clock restored signed storage access. Check time synchronization before changing storage credentials or recovery behavior. Correct large clock drift while test workloads are stopped, then rerun the affected checks; an expired lease or a clock correction is never allocation-release evidence.

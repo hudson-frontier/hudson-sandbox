@@ -1,6 +1,6 @@
 # Private output storage
 
-Status: shared output metadata, the S3 transport library, independently fenced PostgreSQL publication, and the supervisor archival worker are implemented. Operation status responses expose output progress. Authenticated retained-byte retrieval is connected. A separate [supervisor read-only live-output RPC](supervisor-protocol.md#read-only-live-output) now supplies the guest transport; [authenticated public SSE](api-contract.md#implemented-output-streams) now consumes that transport and prefers verified archived objects. An opt-in standalone cleanup worker connects durable inventory and storage retirement to fenced database completion receipts. The output API acceptance is mapped in the close-out audit below. Broader history compaction remains tracked by [issue #79](https://github.com/hudson-infinity/hudson-sandbox/issues/79). Upload success alone is neither execution success nor publication.
+Status: shared output metadata, the S3 transport library, independently fenced PostgreSQL publication, and the supervisor archival worker are implemented. Operation status responses expose output progress. Authenticated retained-byte retrieval is connected. A separate [supervisor read-only live-output RPC](supervisor-protocol.md#read-only-live-output) now supplies the guest transport; [authenticated public SSE](api-contract.md#implemented-output-streams) now consumes that transport and prefers verified archived objects. An opt-in standalone cleanup worker connects durable inventory and storage retirement to fenced database completion receipts. The output API acceptance is mapped in the close-out audit below. Broader history compaction remains tracked by [issue #79](https://github.com/hudson-frontier/hudsonbox/issues/79). Upload success alone is neither execution success nor publication.
 
 ## Object identity and integrity
 
@@ -116,7 +116,7 @@ The [retained-output endpoint](api-contract.md#implemented-retained-output-reads
 
 ## Output API acceptance audit
 
-The core acceptance criteria of [#46](https://github.com/hudson-infinity/hudson-sandbox/issues/46) are implemented and covered by the following paths. This is a feature close-out, separate from journal/history compaction in [#79](https://github.com/hudson-infinity/hudson-sandbox/issues/79) and supported-host isolation/performance qualification in [#28](https://github.com/hudson-infinity/hudson-sandbox/issues/28) and [#110](https://github.com/hudson-infinity/hudson-sandbox/issues/110).
+The core acceptance criteria of [#46](https://github.com/hudson-frontier/hudsonbox/issues/46) are implemented and covered by the following paths. This is a feature close-out, separate from journal/history compaction in [#79](https://github.com/hudson-frontier/hudsonbox/issues/79) and supported-host isolation/performance qualification in [#28](https://github.com/hudson-frontier/hudsonbox/issues/28) and [#110](https://github.com/hudson-frontier/hudsonbox/issues/110).
 
 | Required behavior | Implementation and verification |
 | --- | --- |

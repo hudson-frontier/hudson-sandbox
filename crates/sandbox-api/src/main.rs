@@ -12,7 +12,7 @@ use sandbox_store::Store;
 use std::{net::SocketAddr, path::PathBuf};
 
 #[derive(Parser)]
-#[command(about = "Hudson Sandbox HTTPS API and offline operator setup")]
+#[command(about = "Hudsonbox HTTPS API and offline operator setup")]
 struct Args {
     #[command(subcommand)]
     command: Command,

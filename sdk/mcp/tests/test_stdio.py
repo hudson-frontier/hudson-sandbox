@@ -20,7 +20,7 @@ from cryptography.x509.oid import NameOID
 from mcp import Client, StdioServerParameters
 
 from test_adapter import KEY, OP, SB, SECRET, admitted, config, operation
-from hudson_sandbox_mcp.stdio import MAX_FRAME_BYTES
+from hudsonbox_mcp.stdio import MAX_FRAME_BYTES
 
 
 class HTTPSFixture:
@@ -141,7 +141,7 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
         self.fixture = HTTPSFixture(Path(self.directory.name))
         self.params = StdioServerParameters(
             command=sys.executable,
-            args=["-m", "hudson_sandbox_mcp", "--config", str(self.fixture.profile)],
+            args=["-m", "hudsonbox_mcp", "--config", str(self.fixture.profile)],
             env={
                 "PYTHONPATH": os.environ.get("PYTHONPATH", ""),
                 "PYTHONDONTWRITEBYTECODE": "1",
@@ -231,7 +231,7 @@ class StdioTests(unittest.IsolatedAsyncioTestCase):
                     [
                         sys.executable,
                         "-m",
-                        "hudson_sandbox_mcp",
+                        "hudsonbox_mcp",
                         "--config",
                         str(self.fixture.profile),
                     ],

@@ -1,6 +1,6 @@
 # Local host maintenance
 
-The offline `sandbox-host-manager` command provides the draining slice of [#116](https://github.com/hudson-infinity/hudson-sandbox/issues/116). It uses trusted operator database access; no new public management endpoint or guest authority is exposed. [Capability enrollment](host-capabilities.md) adds a separate operator-approved compatibility contract. Backup/restore rehearsals and supported-host upgrade qualification remain work in that issue.
+The offline `sandbox-host-manager` command provides the draining slice of [#116](https://github.com/hudson-frontier/hudsonbox/issues/116). It uses trusted operator database access; no new public management endpoint or guest authority is exposed. [Capability enrollment](host-capabilities.md) adds a separate operator-approved compatibility contract. Backup/restore rehearsals and supported-host upgrade qualification remain work in that issue.
 
 ## Private configuration and commands
 

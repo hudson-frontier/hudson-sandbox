@@ -11,7 +11,7 @@ import re
 import sys
 import time
 
-from hudson_sandbox import Client, ClientError, models
+from hudsonbox import Client, ClientError, models
 
 import recover_execute as state
 import recover_operation as steps

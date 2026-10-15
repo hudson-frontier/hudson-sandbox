@@ -7,7 +7,7 @@ version = "0.0.0"
 edition = "2024"
 rust-version = "1.92"
 license = "Apache-2.0"
-repository = "https://github.com/hudson-infinity/hudson-sandbox"
+repository = "https://github.com/hudson-frontier/hudsonbox"
 publish = false
 
 # Dependency choices are recorded here as they are made. Cargo only resolves an

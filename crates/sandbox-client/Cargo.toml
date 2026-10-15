@@ -1,6 +1,6 @@
 [package]
 name = "sandbox-client"
-description = "Bounded HTTPS client for the Hudson Sandbox project API."
+description = "Bounded HTTPS client for the Hudsonbox project API."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

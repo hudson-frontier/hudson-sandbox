@@ -6,7 +6,7 @@
 # with their native server, and every connection from the host silently
 # reaches the wrong database. That failure looks like a missing role, not a
 # port conflict, so it is worth avoiding by construction.
-name: hudson-sandbox-dev
+name: hudsonbox-dev
 
 services:
   postgres:

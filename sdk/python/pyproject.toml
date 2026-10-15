@@ -3,13 +3,13 @@ requires = ["setuptools==82.0.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "hudson-sandbox-client"
+name = "hudsonbox-client"
 version = "0.0.0"
-description = "Project-scoped HTTPS client for Hudson Sandbox"
+description = "Project-scoped HTTPS client for Hudsonbox"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 dependencies = ["httpx==0.28.1"]
 
 [tool.setuptools.package-data]
-hudson_sandbox = ["py.typed"]
+hudsonbox = ["py.typed"]

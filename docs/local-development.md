@@ -2,7 +2,7 @@
 
 The current focus is building and running on available local hardware. PostgreSQL
 and S3-compatible storage run locally; no rented host, managed service, cloud
-account or deployment is required. The [implementation roadmap](https://github.com/hudson-infinity/hudson-sandbox/issues/117)
+account or deployment is required. The [implementation roadmap](https://github.com/hudson-frontier/hudsonbox/issues/117)
 tracks the missing workload image, quickstart and security gates. This guide is
 prerequisite diagnosis, not a complete installer or a qualified workload quickstart.
 

@@ -35,6 +35,12 @@ using the same immutable recipe as CI. The first `make up` builds the fixture;
 it preserves existing development volumes. The object-storage ports bind to
 loopback. No registry credentials or downloaded upstream binaries are needed.
 
+The default Compose project is now `hudsonbox-dev`. Existing projects and volumes
+keep their original names. To keep using an existing stack after the rename, set
+`COMPOSE_PROJECT_NAME` to its current project name before running `make up` or
+`make down`; `docker compose ls` lists existing projects. The repository rename
+does not migrate, rename or remove dependency data or Lima instances.
+
 The stack binds PostgreSQL on 55432 and MinIO on 59000, not their defaults. If you already run PostgreSQL natively, the container binds `::` while `127.0.0.1` stays with your own server, and every connection from the host quietly reaches the wrong database — which surfaces as a missing role rather than a port conflict. Non-default ports remove the ambiguity. `make reset-db` drops the development schema when a migration changes underneath you.
 
 Authentication, admission, claims, reservations, and read handlers have executable tests. The fake provides the shared gRPC create/inspect/stop service over mTLS and always reports simulated evidence. It starts no VM or process. Create, execute and destroy are integrated through the controller, with real execution evidence from the [Linux supervisor](../real-supervisor.md). Retained output is archived and retrievable through the authenticated API. Public cancellation, files and live streaming are integrated. The [Rust client and project CLI](../client-cli.md) use generated [OpenAPI models and requests](../openapi.md). [Python/TypeScript clients](../language-clients.md) cover the same operations with shared conformance; distribution remains unfinished.

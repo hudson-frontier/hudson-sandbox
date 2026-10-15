@@ -23,7 +23,7 @@ The [controller](../controller.md), [real supervisor](../real-supervisor.md), [g
 - [ ] Supply production Debian images with our init/agent and a reproducible pinned guest kernel build: modules disabled and lockdown enabled. Existing BusyBox development fixtures do not satisfy this image contract.
 - [ ] Implement the per-sandbox network namespace, host-side resolver, nftables CIDR/port policy and bandwidth controls from [networking](../networking.md). A development VM with no NIC is not this policy engine.
 - [ ] Complete supported-installation private RPC binding, per-host certificate issuance/rotation and internal CA operations. Pinned mTLS authentication already exists; certificate operations and installation policy remain work.
-- [ ] Complete whole-allocation host journal/guardian metadata lifecycle and permanent object-store marker authority fencing. Do not delete replay fences based on time, local cancellation or a release flag. Domain history retirement alone does not finish [issue #79](https://github.com/hudson-infinity/hudson-sandbox/issues/79).
+- [ ] Complete whole-allocation host journal/guardian metadata lifecycle and permanent object-store marker authority fencing. Do not delete replay fences based on time, local cancellation or a release flag. Domain history retirement alone does not finish [issue #79](https://github.com/hudson-frontier/hudsonbox/issues/79).
 
 ## Passing 1a
 

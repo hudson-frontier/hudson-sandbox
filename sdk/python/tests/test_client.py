@@ -2,9 +2,9 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from hudson_sandbox import Client, ClientError, models, new_idempotency_key
-from hudson_sandbox._wire import parse_json, decode_model, encode_model, json_bytes
-from hudson_sandbox._stream import Parser
+from hudsonbox import Client, ClientError, models, new_idempotency_key
+from hudsonbox._wire import parse_json, decode_model, encode_model, json_bytes
+from hudsonbox._stream import Parser
 
 
 class ClientTests(unittest.TestCase):

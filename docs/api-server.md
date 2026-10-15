@@ -41,7 +41,7 @@ Prerequisites: the pinned Rust toolchain, `protoc`, Python 3, OpenSSL, and the [
 Create private local configuration outside the repository:
 
 ```sh
-export SANDBOX_DEV_DIR="$HOME/.local/share/hudson-sandbox-dev"
+export SANDBOX_DEV_DIR="$HOME/.local/share/hudsonbox-dev"
 umask 077
 mkdir -p "$SANDBOX_DEV_DIR"
 chmod 700 "$SANDBOX_DEV_DIR"

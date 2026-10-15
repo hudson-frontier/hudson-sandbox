@@ -6,7 +6,7 @@ import sys
 from contextlib import contextmanager
 
 import anyio
-from hudson_sandbox._wire import ClientError, parse_json
+from hudsonbox._wire import ClientError, parse_json
 from mcp.server.stdio import stdio_server
 
 MAX_FRAME_BYTES = 131072
