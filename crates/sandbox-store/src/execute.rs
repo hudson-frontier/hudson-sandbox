@@ -271,6 +271,7 @@ impl Store {
             owner,
             command,
             digest,
+            expected_generation,
         } = ctx;
         let dispatched = op.try_get::<i32, _>("attempt_count")? > 0
             || op.try_get::<String, _>("status")? == "unknown";
@@ -326,9 +327,7 @@ impl Store {
                 AND (t->>'expires_at' IS NULL OR (t->>'expires_at')::timestamptz>clock_timestamp()))
             FROM operations o JOIN projects p ON p.id=o.project_id JOIN sandboxes s ON s.id=o.sandbox_id WHERE o.id=$1")
             .bind(claim.operation_id.uuid()).fetch_one(&mut *tx).await?;
-        let current = command
-            .expected_generation
-            .is_none_or(|expected| expected == owner.generation)
+        let current = expected_generation.is_none_or(|expected| expected == owner.generation)
             && sandbox.try_get::<String, _>("desired_state")? == "running"
             && sandbox.try_get::<String, _>("observed_state")? == "running"
             && sandbox
@@ -443,6 +442,7 @@ struct Context {
     owner: Ownership,
     command: Execute,
     digest: [u8; 32],
+    expected_generation: Option<i64>,
 }
 async fn context(db: &mut PgConnection, claim: &Claim) -> Result<Context, DispatchError> {
     let op = sqlx::query(
@@ -485,6 +485,7 @@ async fn context(db: &mut PgConnection, claim: &Claim) -> Result<Context, Dispat
     let command: CommandInput =
         serde_json::from_value(op.try_get("payload")?).map_err(|_| DispatchError::InvalidData)?;
     command.validate().map_err(|_| DispatchError::InvalidData)?;
+    let expected_generation = command.expected_generation;
     let command = command.for_operation(claim.operation_id);
     let digest = command.digest().map_err(|_| DispatchError::InvalidData)?;
     let owner = Ownership {
@@ -514,6 +515,7 @@ async fn context(db: &mut PgConnection, claim: &Claim) -> Result<Context, Dispat
         owner,
         command,
         digest,
+        expected_generation,
     })
 }
 
