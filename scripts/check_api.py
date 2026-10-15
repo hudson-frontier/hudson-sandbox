@@ -130,7 +130,9 @@ def check_registered_routes(spec):
     # The API registers literal paths and simple Axum method chains. Refuse
     # unfamiliar registration syntax instead of claiming it was inspected.
     registered = set()
-    for source in (ROOT/'crates/sandbox-api/src').rglob('*.rs'):
+    operator = set()
+    source_root = ROOT/'crates/sandbox-api/src'
+    for source in source_root.rglob('*.rs'):
         text = source.read_text()
         matches = list(re.finditer(r'\.route\(\s*"([^"\n]+)"\s*,', text))
         assert len(matches) == text.count('.route('), f'Unrecognized route registration in {source}'
@@ -144,7 +146,13 @@ def check_registered_routes(spec):
             methods = re.findall(r'\b(get|post|put|delete|patch|head|options)\(', text[match.end():end-1])
             assert methods, f'Unrecognized HTTP method registration in {source}'
             path = re.sub(r'\{[^}]+\}', '{}', match[1])
-            registered.update((path, method) for method in methods)
+            # The local operator listener has its own fixed inventory. Do not
+            # exempt whole files from inspection or put unauthenticated probes
+            # in the Project OpenAPI document and generated clients.
+            target = operator if source == source_root/'health.rs' else registered
+            target.update((path, method) for method in methods)
+    expected_operator = {('/livez', 'get'), ('/readyz', 'get')}
+    assert operator == expected_operator, f'Operator route drift: {operator ^ expected_operator}'
     declared = {(re.sub(r'\{[^}]+\}', '{}', path), method)
                 for path, item in spec['paths'].items() for method in item}
     assert registered == declared, f'Route drift: undocumented={registered-declared}, unimplemented={declared-registered}'
