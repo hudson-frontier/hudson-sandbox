@@ -63,7 +63,11 @@ async def step(client, root, binding, name, request, seconds):
         if steps.receipt(journal, digest) is None:
             await steps.recover(client, journal, binding, "submit", seconds)
         report = await steps.recover(client, journal, binding, "wait", seconds)
-        if report["status"] != "succeeded" or report["response_expired"]:
+        # Destroy needs only its retained terminal status, not an expired result
+        # body. Other steps still need their original completion evidence.
+        if report["status"] != "succeeded" or (
+            report["response_expired"] and name != "destroy"
+        ):
             raise state.StateError(
                 "saved step is not successful; inspect its retained operation"
             )

@@ -69,6 +69,9 @@ class WorkloadTests(unittest.IsolatedAsyncioTestCase):
         self.generation = 1
         self.destroyed = False
         self.corrupt = False
+        self.expired_destroy = False
+        self.expired_execute = False
+        self.destroy_status = "succeeded"
 
     async def asyncTearDown(self):
         await self.client.aclose()
@@ -148,6 +151,12 @@ class WorkloadTests(unittest.IsolatedAsyncioTestCase):
                     "exit_code": 0,
                     "signal": None,
                 }
+            if kind == "destroy" and self.expired_destroy:
+                value["response_expired"] = True
+            if kind == "execute" and self.expired_execute:
+                value["response_expired"] = True
+            if kind == "destroy":
+                value["status"] = self.destroy_status
             return reply(200, value)
         if path == "/v1/sandboxes/" + SB:
             return reply(
@@ -387,6 +396,50 @@ class WorkloadTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.calls), count)
         self.assertFalse((self.directory / "verified-download.bin").exists())
         self.assertFalse(self.destroyed)
+
+    async def test_successful_expired_destroy_finishes_after_lost_local_completion(
+        self,
+    ):
+        write_new = example.state.Journal.write_new
+
+        def lose_completion(journal, name, data):
+            if name == "completed.json":
+                raise OSError("local completion not saved")
+            return write_new(journal, name, data)
+
+        with patch.object(example.state.Journal, "write_new", new=lose_completion):
+            with self.assertRaises(OSError):
+                await self.call()
+        self.assertTrue(self.destroyed)
+        self.assertFalse((self.directory / "completed.json").exists())
+        calls = len(self.calls)
+        self.expired_destroy = True
+        report = await self.call()
+        self.assertEqual(report["destroy_status"], "succeeded")
+        self.assertEqual(
+            [(method, path) for method, path, _, _ in self.calls[calls:]],
+            [("GET", "/v1/operations/" + OPS["destroy"])],
+        )
+        self.assertTrue((await self.call())["saved_report"])
+
+    async def test_unsuccessful_expired_destroy_never_becomes_completed_cleanup(self):
+        self.expired_destroy = True
+        for status in ("failed", "cancelled", "unknown"):
+            self.destroy_status = status
+            with self.assertRaises(example.state.StateError):
+                await self.call()
+            self.assertFalse((self.directory / "completed.json").exists())
+        self.assertEqual(len(self.posts("/destroy")), 1)
+        self.assertEqual(len(self.posts("/execute")), 1)
+        self.assertEqual(len(self.posts("/files/captures")), 1)
+
+    async def test_expired_execute_result_still_prevents_workload_completion(self):
+        self.expired_execute = True
+        with self.assertRaises(example.state.StateError):
+            await self.call()
+        self.assertFalse(self.posts("/files/captures"))
+        self.assertFalse(self.posts("/destroy"))
+        self.assertFalse((self.directory / "completed.json").exists())
 
 
 if __name__ == "__main__":
