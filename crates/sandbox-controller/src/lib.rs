@@ -7,6 +7,7 @@ mod recovery;
 pub mod retirement;
 mod uploads;
 pub mod wakeup;
+pub mod workers;
 
 use sandbox_protocol::{
     HostId,
@@ -42,6 +43,8 @@ pub enum ControllerError {
     AllocationAuthority(#[from] sandbox_store::allocation_permits::Error),
     #[error("configure a positive host epoch and nonempty immutable image allowlist")]
     InvalidConfig,
+    #[error("configure between 1 and 16 controller workers")]
+    InvalidWorkerCount,
     #[error("supervisor health response does not match the configured host or evidence policy")]
     HostIdentity,
     #[error("supervisor health request failed")]
@@ -76,6 +79,7 @@ pub struct Controller {
     client: SupervisorClient<Channel>,
     archive_client: SupervisorClient<Channel>,
     operation_cursor: usize,
+    authority_sync: std::sync::Arc<tokio::sync::Mutex<()>>,
     file_sources: Option<std::sync::Arc<dyn sandbox_artifacts::sources::SourceBackend>>,
     file_cache: uploads::FileCache,
 }
@@ -108,6 +112,7 @@ impl Controller {
             client,
             archive_client,
             operation_cursor: 0,
+            authority_sync: std::sync::Arc::new(tokio::sync::Mutex::new(())),
             file_sources: None,
             file_cache: None,
         };

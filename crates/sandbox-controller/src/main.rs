@@ -1,6 +1,9 @@
 //! One-host controller. Operator provisioning and TLS are required in every mode.
 use clap::Parser;
-use sandbox_controller::{Controller, ControllerConfig, Tick};
+use sandbox_controller::{
+    Controller, ControllerConfig,
+    workers::{DEFAULT_WORKERS, MAX_WORKERS, WorkerPool},
+};
 use sandbox_protocol::HostId;
 use sandbox_store::Store;
 use std::{collections::BTreeSet, path::PathBuf, time::Duration};
@@ -29,6 +32,9 @@ struct Args {
     /// Run one maintenance/operation tick and exit; useful for controlled diagnostics.
     #[arg(long)]
     once: bool,
+    /// Independent reconciliation loops; --once always runs a single tick.
+    #[arg(long, default_value_t = DEFAULT_WORKERS, value_parser = clap::value_parser!(u32).range(1..=i64::from(MAX_WORKERS)))]
+    workers: u32,
     /// Run an independent output publisher; supervisor needs --output-config.
     #[arg(long)]
     archive_output: bool,
@@ -50,7 +56,8 @@ struct Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-    let store = Store::connect(&args.database_url, 8).await?;
+    // One shared listener plus room for concurrent transactions and publishers.
+    let store = Store::connect(&args.database_url, 8 + 2 * args.workers).await?;
     store.migrate().await?;
     let mut controller = Controller::connect(
         store.clone(),
@@ -97,7 +104,7 @@ async fn main() -> anyhow::Result<()> {
         }
         return Ok(());
     }
-    let mut wakeup = sandbox_controller::wakeup::WorkWakeup::start(store);
+    let mut workers = WorkerPool::start(&controller, args.workers)?;
     let allocations = if args.retire_allocations {
         let mut worker = controller.allocation_retirer();
         Some(tokio::spawn(async move {
@@ -147,17 +154,11 @@ async fn main() -> anyhow::Result<()> {
     } else {
         None
     };
-    loop {
-        tokio::select! {
-            _ = tokio::signal::ctrl_c() => break,
-            result = controller.tick() => match result {
-                Ok(Tick::Idle) => {},
-                Ok(tick) => eprintln!("sandbox controller: {tick:?}"),
-                Err(error) => eprintln!("sandbox controller: {error}"),
-            }
-        }
-        tokio::select! { _ = tokio::signal::ctrl_c() => break, _ = wakeup.wait() => {} }
-    }
+    let stopped = tokio::select! {
+        signal = tokio::signal::ctrl_c() => signal.map_err(anyhow::Error::from),
+        result = workers.join_next() => Err(anyhow::anyhow!("controller worker exited: {result:?}")),
+    };
+    workers.shutdown().await;
     if let Some(task) = retirement {
         task.abort();
     }
@@ -167,5 +168,56 @@ async fn main() -> anyhow::Result<()> {
     if let Some(task) = archival {
         task.abort();
     }
-    Ok(())
+    stopped
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::CommandFactory;
+    use sandbox_protocol::Id;
+
+    #[test]
+    fn worker_count_is_bounded_and_single_tick_mode_remains_available() {
+        let command = Args::command();
+        let host = HostId::generate().to_string();
+        let args = [
+            "--database-url",
+            "postgres://unused",
+            "--endpoint",
+            "https://unused",
+            "--host-id",
+            &host,
+            "--host-epoch",
+            "1",
+            "--ca-cert",
+            "ca",
+            "--client-cert",
+            "cert",
+            "--client-key",
+            "key",
+            "--image-digest",
+            "sha256:unused",
+        ];
+        // Clap validates the worker count independently of runtime connection.
+        for count in ["0", "17", "-1"] {
+            let result = command.clone().try_get_matches_from(
+                ["sandbox-controller"]
+                    .into_iter()
+                    .chain(args)
+                    .chain(["--workers", count]),
+            );
+            assert!(result.is_err());
+        }
+        for count in ["1", "4", "16"] {
+            let result = command.clone().try_get_matches_from(
+                ["sandbox-controller"].into_iter().chain(args).chain([
+                    "--workers",
+                    count,
+                    "--once",
+                ]),
+            );
+            assert!(result.is_ok(), "{result:?}");
+        }
+    }
 }

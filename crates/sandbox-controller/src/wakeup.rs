@@ -62,9 +62,13 @@ impl WorkWakeup {
     pub async fn wait(&mut self) -> WakeReason {
         wait(&mut self.signal).await
     }
+
+    pub(crate) fn subscribe(&self) -> watch::Receiver<()> {
+        self.signal.clone()
+    }
 }
 
-async fn wait(signal: &mut watch::Receiver<()>) -> WakeReason {
+pub(crate) async fn wait(signal: &mut watch::Receiver<()>) -> WakeReason {
     let start = Instant::now();
     tokio::select! {
         _ = sleep_until(start + POLL) => WakeReason::Poll,

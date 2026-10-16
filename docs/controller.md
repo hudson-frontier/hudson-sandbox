@@ -88,7 +88,7 @@ The binary connects to PostgreSQL, applies migrations, requires mTLS credentials
 
 The operation table remains the durable queue. New nonterminal lifecycle/command admissions attempt an empty notification on the database-local `hudsonbox_work_v1` channel **after** committing. The extra query, including pool acquisition, has a 100 ms budget. Notification failure or cancellation cannot change the committed operation or its HTTP response. Existing retries, policy rejections and immediately completed no-ops do not publish new work. File-source readiness, delayed retries, lease maintenance and cleanup continue to rely on the ordinary scans.
 
-The listener holds one connection from the controller's existing eight-connection pool. Connection and subscription attempts have a one-second budget and retry no faster than once per second in a background task. Successful subscription, including after reconnection, triggers a scan to discover work whose notification was missed. An unavailable listener never blocks the periodic scan. Notifications are coalesced into one signal; notification-driven waits have a 50 ms minimum, limiting them to twenty scans per second without extending the original polling deadline. Dropping the worker stops its listener.
+The listener holds one connection from the controller's configured database pool. Connection and subscription attempts have a one-second budget and retry no faster than once per second in a background task. Successful subscription, including after reconnection, triggers a scan to discover work whose notification was missed. An unavailable listener never blocks the periodic scan. Notifications are coalesced into one signal; notification-driven waits have a 50 ms minimum, limiting them to twenty scans per second without extending the original polling deadline. Dropping the worker pool stops its listener.
 
 A hint contains no project, sandbox, operation, command or credential data. Nonempty payloads are ignored. A hint merely permits another scan: claims, authorization, host identity, leases, generations and dispatch receipts still decide which work can run. It cannot create an operation, select an allocation or replay a command. Older APIs and controllers interoperate through polling; no migration or notification delivery guarantee is required.
 
@@ -126,6 +126,43 @@ The [standalone HTTPS API and offline project provisioning](api-server.md) are e
 ## Real Linux lifecycle integration
 
 The [real supervisor](real-supervisor.md) now implements the same lifecycle RPCs with `simulated=false`. Its controlled PostgreSQL/HTTP-router test exercises authenticated admission, real VM readiness, scheduled renewal and verified destroy/release through this controller. Command execution, public file transfer and verified previous-epoch allocation recovery are integrated. See the real supervisor document for host capacity, restart and evidence limits.
+
+## Concurrent reconciliation
+
+The running controller starts four independent reconciliation workers by default.
+Use `--workers N` to select 1 through 16; `--workers 1` restores serial
+processing. `--once` still runs exactly one controller tick and the explicitly
+requested publisher/retirement ticks.
+
+Each worker performs the same cancellation, authenticated host check, allocation
+maintenance, and rotating operation scan. A slow file-source read or lifecycle
+RPC occupies one worker, allowing the others to maintain leases and process
+independent sandboxes. Shared database/host outages or all workers waiting at
+once can still delay progress. The existing
+operation and allocation claims, deadlines, generations and dispatch receipts
+remain authoritative; worker count never permits replaying uncertain commands.
+Sibling workers serialize allocation-authority registration so concurrent
+acknowledgements cannot advance beyond a worker's inspected permit batch.
+
+Workers share one notification listener and its single pool connection. Each
+subscriber coalesces notifications and retains the 500 ms polling fallback and
+50 ms minimum notification wait. The twenty-scans-per-second bound applies to
+each worker. The process configures at most `8 + 2 * N` database connections,
+including the listener and optional background publishers. Each worker retains
+at most one verified upload source, up to 8 MiB, so the pool can retain up to
+`N * 8 MiB` of source bytes in addition to in-flight transport buffers. Sources
+can be read again when another worker claims the next upload phase.
+
+Shutdown cancels and joins the reconciliation workers. Committed claims expire
+through the existing recovery path; cancellation neither releases reservations
+nor proves that a dispatched operation did not run. An unexpected worker exit
+stops the controller process so its service supervisor can restart it.
+
+The [file-upload integration tests](../crates/sandbox-controller/tests/uploads.rs)
+block a source read and require another sandbox's creation, maintenance and
+destruction to complete before releasing it. They also cancel an in-flight read
+and recover its upload under replacement workers without duplicate publication.
+These checks use PostgreSQL and authenticated fake-host RPCs, not a real VM.
 
 ## Command admission and dispatch ownership
 
