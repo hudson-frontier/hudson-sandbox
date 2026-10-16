@@ -175,6 +175,7 @@ async fn main() -> anyhow::Result<()> {
 mod tests {
     use super::*;
     use clap::CommandFactory;
+    use sandbox_protocol::Id;
 
     #[test]
     fn worker_count_is_bounded_and_single_tick_mode_remains_available() {
