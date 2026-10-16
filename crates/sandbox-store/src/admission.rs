@@ -201,6 +201,7 @@ impl Store {
 
         tx.commit().await.map_err(StoreError::Query)?;
 
+        self.notify_work().await;
         Ok(Admission::Admitted {
             sandbox_id,
             operation_id,

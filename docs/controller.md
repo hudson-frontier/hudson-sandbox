@@ -82,7 +82,17 @@ The controller rejects a simulated supervisor unless `--allow-simulated` is expl
 
 ## Running the controller
 
-The binary connects to PostgreSQL, applies migrations, requires mTLS credentials and explicit host/image configuration, then polls every 500 ms. It handles shutdown without erasing pending intent. `--once` performs one lifecycle tick plus the explicitly enabled maintenance workers for controlled diagnostics.
+The binary connects to PostgreSQL, applies migrations, requires mTLS credentials and explicit host/image configuration, then scans for work at least every 500 ms between ticks. A background PostgreSQL listener can wake it earlier when a new create, execute, cancellation or destroy operation commits. It handles shutdown without erasing pending intent. `--once` performs one lifecycle tick plus the explicitly enabled maintenance workers for controlled diagnostics, without starting a listener.
+
+### Work-discovery hints
+
+The operation table remains the durable queue. New nonterminal lifecycle/command admissions attempt an empty notification on the database-local `hudsonbox_work_v1` channel **after** committing. The extra query, including pool acquisition, has a 100 ms budget. Notification failure or cancellation cannot change the committed operation or its HTTP response. Existing retries, policy rejections and immediately completed no-ops do not publish new work. File-source readiness, delayed retries, lease maintenance and cleanup continue to rely on the ordinary scans.
+
+The listener holds one connection from the controller's existing eight-connection pool. Connection and subscription attempts have a one-second budget and retry no faster than once per second in a background task. Successful subscription, including after reconnection, triggers a scan to discover work whose notification was missed. An unavailable listener never blocks the periodic scan. Notifications are coalesced into one signal; notification-driven waits have a 50 ms minimum, limiting them to twenty scans per second without extending the original polling deadline. Dropping the worker stops its listener.
+
+A hint contains no project, sandbox, operation, command or credential data. Nonempty payloads are ignored. A hint merely permits another scan: claims, authorization, host identity, leases, generations and dispatch receipts still decide which work can run. It cannot create an operation, select an allocation or replay a command. Older APIs and controllers interoperate through polling; no migration or notification delivery guarantee is required.
+
+[Wake-up integration tests](../crates/sandbox-controller/tests/wakeup.rs) cover committed HTTP admission, duplicate and denied requests, work admitted before subscription, forged hints, disconnection/reconnection and unavailable listeners. Deterministic timer tests cover burst coalescing and polling bounds; the [store helper](../crates/sandbox-store/src/work.rs) tests bounded notification failure under pool pressure. These are control-plane checks, not measurements of VM startup performance.
 
 ```sh
 cargo run -p sandbox-controller -- --help

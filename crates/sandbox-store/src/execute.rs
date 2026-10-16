@@ -245,6 +245,7 @@ impl Store {
             return Err(DispatchError::Conflict);
         }
         tx.commit().await?;
+        self.notify_work().await;
         Ok(ExecuteAdmission::Accepted {
             operation_id: operation,
             status: "queued".into(),

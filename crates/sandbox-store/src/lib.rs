@@ -29,6 +29,7 @@ pub mod recovery;
 pub mod retention;
 pub mod stream;
 pub mod uploads;
+pub mod work;
 
 use std::time::Duration;
 

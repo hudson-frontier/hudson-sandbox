@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
     let store = Store::connect(&args.database_url, 8).await?;
     store.migrate().await?;
     let mut controller = Controller::connect(
-        store,
+        store.clone(),
         ControllerConfig {
             endpoint: args.endpoint,
             host: args.host_id,
@@ -97,6 +97,7 @@ async fn main() -> anyhow::Result<()> {
         }
         return Ok(());
     }
+    let mut wakeup = sandbox_controller::wakeup::WorkWakeup::start(store);
     let allocations = if args.retire_allocations {
         let mut worker = controller.allocation_retirer();
         Some(tokio::spawn(async move {
@@ -155,7 +156,7 @@ async fn main() -> anyhow::Result<()> {
                 Err(error) => eprintln!("sandbox controller: {error}"),
             }
         }
-        tokio::select! { _ = tokio::signal::ctrl_c() => break, _ = tokio::time::sleep(Duration::from_millis(500)) => {} }
+        tokio::select! { _ = tokio::signal::ctrl_c() => break, _ = wakeup.wait() => {} }
     }
     if let Some(task) = retirement {
         task.abort();

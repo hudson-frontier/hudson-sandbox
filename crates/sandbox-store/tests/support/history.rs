@@ -487,6 +487,17 @@ async fn history_scan_rotates_past_more_than_one_batch_of_empty_allocations(pool
         last = Some(f);
     }
     let f = last.unwrap();
+    // Put the history-bearing allocation after the first batch explicitly.
+    // Generated identity order is not the scan priority this test exercises.
+    // The other 33 allocations are unscanned (NULLS FIRST); this old timestamp
+    // still sorts before the current timestamps written by the first scan.
+    sqlx::query(
+        "UPDATE allocations SET history_commands_scan_at='2000-01-01T00:00:00Z' WHERE id=$1",
+    )
+    .bind(f.allocation.uuid())
+    .execute(&pool)
+    .await
+    .unwrap();
     let id = f.admit().await;
     finish(&f, id).await;
     assert!(

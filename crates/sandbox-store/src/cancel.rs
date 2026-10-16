@@ -153,6 +153,9 @@ impl Store {
             return Err(DispatchError::Conflict);
         }
         tx.commit().await?;
+        if !done {
+            self.notify_work().await;
+        }
         Ok(CancelAdmission::Accepted {
             operation_id: id,
             sandbox_id: sandbox,

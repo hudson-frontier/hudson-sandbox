@@ -6,6 +6,7 @@ pub mod history;
 mod recovery;
 pub mod retirement;
 mod uploads;
+pub mod wakeup;
 
 use sandbox_protocol::{
     HostId,
