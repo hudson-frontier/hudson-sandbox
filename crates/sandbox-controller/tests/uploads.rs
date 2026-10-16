@@ -845,3 +845,115 @@ async fn expiry_during_host_lock_wait_rolls_back_begin_intent(pool: PgPool) {
 
 #[path = "common/source_cleanup.rs"]
 mod cleanup;
+
+#[sqlx::test(migrator = "sandbox_store::MIGRATOR")]
+async fn worker_pool_maintains_and_destroys_other_sandboxes_during_a_blocked_source_read(
+    pool: PgPool,
+) {
+    let _guard = TEST_LOCK.lock().await;
+    let (f, sources, mut c, s) = setup(&pool).await;
+    let (_, upload) = admit(&f, s, b"blocked data".to_vec()).await;
+    let upload_id = upload["operation_id"].as_str().unwrap();
+    tick(&f, &mut c).await; // Source
+    tick(&f, &mut c).await; // Begin
+    sources.pause_read.store(true, Ordering::SeqCst);
+    let mut workers = sandbox_controller::workers::WorkerPool::start(&c, 2).unwrap();
+    tokio::time::timeout(Duration::from_secs(3), sources.started.notified())
+        .await
+        .unwrap();
+
+    // The read remains blocked for the whole assertion window. Another worker
+    // must renew/inspect the first sandbox and create then destroy the second.
+    sqlx::query("UPDATE allocations SET maintenance_next_at=NULL,maintenance_lease_until=NULL")
+        .execute(&pool)
+        .await
+        .unwrap();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        let (created, second) = f.admit().await;
+        wait_for_success(&f, &created.to_string()).await;
+        let (status, destroy) = f
+            .send(
+                "POST",
+                &format!("/v1/sandboxes/{second}/destroy"),
+                serde_json::json!({}),
+            )
+            .await;
+        assert_eq!(status, StatusCode::ACCEPTED, "{destroy}");
+        wait_for_success(&f, destroy["operation_id"].as_str().unwrap()).await;
+    })
+    .await
+    .unwrap();
+    assert_ne!(state(&f, upload_id).await["status"], "succeeded");
+    assert_eq!(f.fake.total_file_commits().await, 0);
+    assert_eq!(f.fake.total_starts().await, 2);
+    assert!(
+        sqlx::query_scalar::<_, bool>(
+            "SELECT lease_observation IS NOT NULL FROM allocations WHERE released_at IS NULL"
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+    );
+
+    sources.pause_read.store(false, Ordering::SeqCst);
+    sources.resume.add_permits(1);
+    tokio::time::timeout(Duration::from_secs(5), wait_for_success(&f, upload_id))
+        .await
+        .unwrap();
+    assert_eq!(f.fake.total_file_commits().await, 1);
+    workers.shutdown().await;
+}
+
+#[sqlx::test(migrator = "sandbox_store::MIGRATOR")]
+async fn worker_pool_shutdown_cancels_blocked_reads_and_recovers_without_republishing(
+    pool: PgPool,
+) {
+    let _guard = TEST_LOCK.lock().await;
+    let (f, sources, mut c, s) = setup(&pool).await;
+    assert!(matches!(
+        sandbox_controller::workers::WorkerPool::start(&c, 0),
+        Err(sandbox_controller::ControllerError::InvalidWorkerCount)
+    ));
+    assert!(matches!(
+        sandbox_controller::workers::WorkerPool::start(&c, 17),
+        Err(sandbox_controller::ControllerError::InvalidWorkerCount)
+    ));
+    let (_, upload) = admit(&f, s, b"recover data".to_vec()).await;
+    let upload_id = upload["operation_id"].as_str().unwrap();
+    tick(&f, &mut c).await;
+    tick(&f, &mut c).await;
+    sources.pause_read.store(true, Ordering::SeqCst);
+    let mut workers = sandbox_controller::workers::WorkerPool::start(&c, 1).unwrap();
+    tokio::time::timeout(Duration::from_secs(3), sources.started.notified())
+        .await
+        .unwrap();
+    tokio::time::timeout(Duration::from_secs(2), workers.shutdown())
+        .await
+        .unwrap();
+    drop(workers);
+    assert_eq!(f.fake.total_file_commits().await, 0);
+    assert_eq!(sources.reads.load(Ordering::SeqCst), 1);
+    assert_ne!(state(&f, upload_id).await["status"], "succeeded");
+
+    // Only normal claim recovery permits the replacement pool to continue.
+    sources.pause_read.store(false, Ordering::SeqCst);
+    f.reclaim_now().await;
+    let mut replacement = sandbox_controller::workers::WorkerPool::start(&c, 2).unwrap();
+    tokio::time::timeout(Duration::from_secs(5), wait_for_success(&f, upload_id))
+        .await
+        .unwrap();
+    replacement.shutdown().await;
+    assert_eq!(f.fake.total_file_commits().await, 1);
+    assert_eq!(f.fake.total_starts().await, 1);
+}
+
+async fn wait_for_success(f: &Fixture, id: &str) {
+    loop {
+        let result = state(f, id).await;
+        assert_ne!(result["status"], "failed", "{result}");
+        if result["status"] == "succeeded" {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+}

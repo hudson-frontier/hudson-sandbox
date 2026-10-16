@@ -21,6 +21,10 @@ impl Controller {
         Ok(())
     }
     pub(super) async fn sync_allocation_authority(&mut self) -> Result<u64, ControllerError> {
+        // Sibling workers must not advance host registration while another is
+        // validating an acknowledgement against its bounded database batch.
+        let sync = self.authority_sync.clone();
+        let _guard = sync.lock().await;
         if !self.launch_permits_required {
             self.store
                 .record_allocation_registration(self.config.host, self.config.epoch, false, 0)
